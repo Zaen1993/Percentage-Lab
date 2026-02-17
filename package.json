@@ -1,0 +1,34 @@
+{
+  "name": "percentage-lab",
+  "version": "1.0.0",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "build": "electron-builder --win",
+    "build:win": "electron-builder --win portable"
+  },
+  "author": "Zaen ALabden Moustafa",
+  "license": "MIT",
+  "devDependencies": {
+    "electron": "^25.0.0",
+    "electron-builder": "^24.0.0"
+  },
+  "build": {
+    "appId": "com.percentagelab.app",
+    "productName": "Percentage Lab",
+    "directories": {
+      "output": "dist"
+    },
+    "files": ["**/*"],
+    "win": {
+      "target": ["portable", "nsis"],
+      "icon": "desktop-icon.ico"
+    },
+    "nsis": {
+      "oneClick": true,
+      "perMachine": true,
+      "allowToChangeInstallationDirectory": false,
+      "deleteAppDataOnUninstall": false
+    }
+  }
+}

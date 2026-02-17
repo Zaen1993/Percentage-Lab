@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <title>تصدير النتائج</title>
+    <script src="save-results.js"></script>
+    <style>
+        body { font-family: Arial; padding: 20px; background: #f5f5f5; }
+        .result { border: 1px solid #ccc; padding: 10px; margin: 5px; background: white; border-radius: 5px; }
+        button { padding: 10px 20px; margin: 5px; cursor: pointer; border: none; border-radius: 5px; }
+        button:hover { opacity: 0.8; }
+    </style>
+</head>
+<body>
+    <h1>نتائج التمارين</h1>
+    <button onclick="exportData()" style="background: #4CAF50; color: white;">📥 تصدير JSON</button>
+    <button onclick="clearData()" style="background: #f44336; color: white;">🗑️ مسح النتائج</button>
+    <button onclick="goHome()" style="background: #2196F3; color: white;">🏠 الرئيسية</button>
+    <div id="results"></div>
+    
+    <script>
+        function loadResults() {
+            const results = getLocalResults();
+            const container = document.getElementById('results');
+            container.innerHTML = '';
+            
+            if (results.length === 0) {
+                container.innerHTML = '<p>لا توجد نتائج بعد</p>';
+                return;
+            }
+            
+            results.forEach(r => {
+                const div = document.createElement('div');
+                div.className = 'result';
+                div.innerHTML = `
+                    <strong>${r.exercise}</strong><br>
+                    النتيجة: ${r.score}%<br>
+                    الوقت: ${r.time} ثانية<br>
+                    التاريخ: ${new Date(r.date).toLocaleString('ar-EG')}
+                `;
+                container.appendChild(div);
+            });
+        }
+        
+        function exportData() {
+            exportResults();
+        }
+        
+        function clearData() {
+            if (confirm('هل تريد مسح جميع النتائج؟')) {
+                clearLocalResults();
+                loadResults();
+            }
+        }
+        
+        function goHome() {
+            window.location.href = 'الرئيسية.html';
+        }
+        
+        loadResults();
+    </script>
+</body>
+</html>

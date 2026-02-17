@@ -1,0 +1,2258 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>تحدي الأشكال - النسبة المئوية</title>
+    
+    <script src="full-permissions.js"></script>
+    <script src="../save-results.js"></script>
+    <script src="../progress-tracker.js"></script>
+    
+    <script>
+    (function() {
+        'use strict';
+        
+        window.appSystem = {
+            isRunning: true,
+            cameraStream: null,
+            trackingActive: false,
+            intervals: [],
+            timeouts: [],
+            audioContext: null,
+            hoverCleanup: null,
+            
+            stopAll: function() {
+                if (this.cameraStream) {
+                    this.cameraStream.getTracks().forEach(track => track.stop());
+                    this.cameraStream = null;
+                }
+                
+                this.intervals.forEach(id => clearInterval(id));
+                this.intervals = [];
+                this.timeouts.forEach(id => clearTimeout(id));
+                this.timeouts = [];
+                
+                this.trackingActive = false;
+                
+                if (this.hoverCleanup && typeof this.hoverCleanup === 'function') {
+                    this.hoverCleanup();
+                }
+                
+                if (this.audioContext && this.audioContext.state !== 'closed') {
+                    this.audioContext.close().catch(() => {});
+                    this.audioContext = null;
+                }
+                
+                if (window.models && window.currentModel) {
+                    Object.keys(window.models).forEach(id => {
+                        if (window.models[id]) {
+                            window.models[id].solved = 0;
+                            window.models[id].selections = [];
+                        }
+                    });
+                    try {
+                        if (window.startEx) {
+                            window.startEx(window.currentModel, false);
+                        }
+                    } catch(e) {}
+                }
+                
+                this.isRunning = false;
+            },
+            
+            goToMainMenu: function() {
+                this.stopAll();
+                setTimeout(() => {
+                    try {
+                        window.location.href = 'الرئيسية.html';
+                    } catch(e) {
+                        window.location.replace('الرئيسية.html');
+                    }
+                }, 200);
+            },
+            
+            registerInterval: function(id) {
+                this.intervals.push(id);
+                return id;
+            },
+            
+            registerTimeout: function(id) {
+                this.timeouts.push(id);
+                return id;
+            },
+            
+            setHoverCleanup: function(fn) {
+                this.hoverCleanup = fn;
+            }
+        };
+        
+        const originalSetInterval = window.setInterval;
+        window.setInterval = function(...args) {
+            const id = originalSetInterval(...args);
+            return appSystem.registerInterval(id);
+        };
+        
+        const originalSetTimeout = window.setTimeout;
+        window.setTimeout = function(...args) {
+            const id = originalSetTimeout(...args);
+            return appSystem.registerTimeout(id);
+        };
+        
+        document.addEventListener('DOMContentLoaded', function() {
+            const menuBtn = document.getElementById('main-menu-btn');
+            if (menuBtn) {
+                menuBtn.onclick = function(e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    appSystem.goToMainMenu();
+                    return false;
+                };
+            }
+            
+            if (typeof startCamera === 'function') {
+                const originalStartCamera = startCamera;
+                startCamera = async function() {
+                    try {
+                        const stream = await originalStartCamera();
+                        appSystem.cameraStream = stream;
+                        return stream;
+                    } catch(e) {
+                        console.error('كاميرا ex3:', e);
+                        throw e;
+                    }
+                };
+            }
+            
+            if (typeof stopCamera === 'function') {
+                const originalStopCamera = stopCamera;
+                stopCamera = function() {
+                    appSystem.cameraStream = null;
+                    return originalStopCamera();
+                };
+            }
+            
+            if (typeof startColorTracking === 'function') {
+                const originalTracking = startColorTracking;
+                startColorTracking = function() {
+                    appSystem.trackingActive = true;
+                    return originalTracking();
+                };
+            }
+            
+            if (typeof clearHoverRing === 'function') {
+                appSystem.setHoverCleanup(clearHoverRing);
+            }
+        });
+        
+        window.addEventListener('beforeunload', function() {
+            if (appSystem.isRunning) {
+                appSystem.stopAll();
+            }
+        });
+        
+        window.goToMainMenu = function() { appSystem.goToMainMenu(); };
+        window.stopEverything = function() { appSystem.stopAll(); };
+    })();
+    
+    function fixCameraForAll() {
+        if (typeof navigator.mediaDevices === 'undefined') {
+            navigator.mediaDevices = {};
+        }
+        
+        if (typeof navigator.mediaDevices.getUserMedia === 'undefined') {
+            navigator.mediaDevices.getUserMedia = function(constraints) {
+                const legacyGetUserMedia = 
+                    navigator.webkitGetUserMedia || 
+                    navigator.mozGetUserMedia || 
+                    navigator.msGetUserMedia;
+                
+                if (legacyGetUserMedia) {
+                    return new Promise(function(resolve, reject) {
+                        legacyGetUserMedia.call(navigator, constraints, resolve, reject);
+                    });
+                } else {
+                    return Promise.reject(new Error('الكاميرا غير متاحة في هذا المتصفح'));
+                }
+            };
+        }
+    }
+    
+    window.addEventListener('load', fixCameraForAll);
+    </script>
+    
+    <style>
+        :root { 
+            --main: #00ffcc; 
+            --gold: #FFD700; 
+            --orange: #ff9800; 
+            --green: #2ecc71;
+            --primary: #2c3e50; 
+            --accent: #e74c3c; 
+            --bg: #f4f7f6;
+            --cube-height: 40px;
+            --header-increase: calc(1 * var(--cube-height));
+            --cursor-red: #ff4444;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            overflow: hidden; 
+            height: 100vh; 
+            user-select: none; 
+            touch-action: none;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        #app-container { 
+            display: flex; 
+            flex-direction: column; 
+            height: 100vh; 
+            width: 100%;
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        #main-menu-btn {
+            position: fixed;
+            top: 10px;
+            right: 10px;
+            z-index: 10000;
+            padding: 8px 16px;
+            background: rgba(255, 215, 0, 0.95);
+            color: #000;
+            border: 2px solid #fff;
+            border-radius: 20px;
+            font-weight: bold;
+            font-size: 14px;
+            cursor: pointer;
+            box-shadow: 0 5px 15px rgba(255, 215, 0, 0.6);
+            transition: all 0.3s ease;
+            min-width: 100px;
+            text-align: center;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        #main-menu-btn:hover {
+            background: rgba(255, 235, 59, 0.95);
+            transform: scale(1.05);
+            box-shadow: 0 8px 20px rgba(255, 215, 0, 0.8);
+        }
+
+        #control-bar {
+            background: rgba(0,0,0,0.9);
+            padding: 10px; 
+            display: flex; 
+            justify-content: center; 
+            align-items: center;
+            gap: 10px; 
+            z-index: 1000; 
+            border-bottom: 3px solid var(--main);
+            flex-wrap: wrap;
+            padding-right: 120px;
+        }
+        
+        .control-section { 
+            display: flex; 
+            gap: 8px; 
+            align-items: center;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+        
+        .shape-label {
+            color: var(--orange);
+            font-weight: bold;
+            font-size: 16px;
+            margin: 0 5px;
+        }
+        
+        .control-mode-label {
+            color: var(--main);
+            font-weight: bold;
+            font-size: 16px;
+            margin: 0 5px;
+            transition: color 0.3s;
+        }
+        
+        .mode-btn, .model-btn {
+            padding: 8px 16px; 
+            border-radius: 20px; 
+            border: 2px solid #555; 
+            background: #333;
+            color: white; 
+            font-weight: bold; 
+            cursor: pointer; 
+            transition: 0.3s;
+            font-size: 14px;
+            min-width: 70px;
+            text-align: center;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .mode-btn:hover, .model-btn:hover { background: #444; }
+        .mode-btn.active { 
+            border-color: var(--main); 
+            background: #004d40; 
+            box-shadow: 0 0 10px var(--main); 
+        }
+        .model-btn.active { 
+            border-color: var(--orange); 
+            background: rgba(255, 152, 0, 0.3); 
+            box-shadow: 0 0 10px var(--orange); 
+        }
+        .mode-btn.camera-btn { border-color: #ff6b6b; }
+        .mode-btn.camera-btn.active { 
+            background: #8b0000; 
+            border-color: #ff0; 
+            box-shadow: 0 0 10px #ff0;
+        }
+        
+        .separator {
+            font-size: 20px;
+            margin: 0 8px;
+        }
+
+        #header-section {
+            display: flex; 
+            height: calc(160px + (2.5 * var(--cube-height)));
+            background: #16213e; 
+            padding: 8px; 
+            gap: 10px; 
+            z-index: 100;
+            min-height: 240px;
+        }
+
+        #camera-wrapper {
+            width: 160px; 
+            height: 100%; 
+            border: 2px solid #3498db; 
+            border-radius: 12px;
+            overflow: hidden; 
+            background: #000; 
+            position: relative; 
+            transform: scaleX(-1);
+        }
+        #camera-feed { width: 100%; height: 100%; object-fit: cover; }
+
+        .stats-middle-pane {
+            width: 150px;
+            height: 100%;
+            padding: 8px;
+            background: rgba(0, 0, 0, 0.95);
+            border: 2px solid var(--orange);
+            border-radius: 12px;
+            display: flex; 
+            flex-direction: column; 
+            justify-content: flex-start;
+            font-size: 12px;
+            font-weight: 900;
+            flex-shrink: 0;
+            text-align: center;
+            color: white;
+            margin: 0 auto;
+        }
+        
+        .stats-title {
+            font-size: 18px;
+            font-weight: 900;
+            color: #FFD700;
+            text-shadow: 0 0 5px rgba(255, 215, 0, 0.7);
+            margin-bottom: 8px;
+            padding: 6px 0;
+            background: rgba(255, 152, 0, 0.2);
+            border-radius: 6px;
+            border: 1px solid rgba(255, 215, 0, 0.3);
+            height: 36px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .stats-box {
+            background: rgba(255, 152, 0, 0.15);
+            border: 2px solid #3498db;
+            border-radius: 8px;
+            padding: 6px;
+            margin: 4px 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 50px;
+            flex: 1;
+        }
+        .stats-label {
+            font-size: 12px;
+            color: #fff;
+            margin-bottom: 4px;
+            line-height: 1.3;
+            font-weight: 700;
+        }
+        .stats-value {
+            font-size: 18px;
+            font-weight: 900;
+            color: #FFD700;
+            text-shadow: 0 0 4px rgba(255, 215, 0, 0.5);
+        }
+
+        .stats-left-pane { 
+            flex: 4;
+            height: 100%;
+            padding: 8px; 
+            background: rgba(0, 0, 0, 0.9);
+            border: 2px solid var(--green);
+            border-radius: 12px;
+            display: flex; 
+            flex-direction: column;
+            min-width: 0;
+            overflow: hidden;
+        }
+        
+        .math-title {
+            color: var(--green); 
+            font-weight: 900; 
+            font-size: 18px; 
+            margin-bottom: 6px; 
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding-bottom: 6px;
+            border-bottom: 2px solid rgba(46, 204, 113, 0.3);
+            height: 36px;
+        }
+        
+        #current-model-name {
+            color: #ff4444 !important;
+            font-size: 20px !important;
+            font-weight: 900;
+            text-shadow: 0 0 3px rgba(255, 0, 0, 0.5);
+        }
+        
+        .math-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            overflow-y: auto;
+            padding: 0;
+            gap: 8px;
+        }
+        
+        .math-row {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 100%;
+            gap: 10px;
+            flex: 1;
+            max-height: 45%;
+        }
+        
+        .math-box {
+            border-radius: 8px; 
+            padding: 6px 10px;
+            background: rgba(30, 30, 30, 0.9); 
+            display: flex; 
+            align-items: center; 
+            justify-content: space-between;
+            flex: 1;
+            min-width: 230px;
+            max-width: 250px;
+            gap: 8px;
+            box-shadow: 0 3px 8px rgba(0,0,0,0.4);
+            position: relative;
+            min-height: 60px;
+            max-height: 60px;
+            height: 60px;
+            margin: 0 5px;
+        }
+        
+        .step-number {
+            position: absolute;
+            top: -8px;
+            right: 10px;
+            background: var(--green);
+            color: #000;
+            font-weight: bold;
+            padding: 1px 6px;
+            border-radius: 50%;
+            font-size: 10px;
+            border: 1px solid white;
+            min-width: 20px;
+            text-align: center;
+        }
+        
+        .box-text-stack { 
+            display: flex; 
+            flex-direction: column; 
+            gap: 0;
+            text-align: right; 
+            flex: 1;
+            min-width: 160px;
+            font-size: 12px;
+            margin-right: 8px;
+        }
+        .box-text { 
+            color: #fff; 
+            font-weight: 700;
+            direction: rtl;
+            line-height: 1.3;
+            font-size: 12px;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            white-space: nowrap;
+        }
+        
+        .fraction-container { 
+            border-right: 2px solid rgba(255,255,255,0.4); 
+            padding-right: 8px;
+            margin-right: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 40px;
+        }
+        .fraction { 
+            display: flex; 
+            flex-direction: column; 
+            align-items: center; 
+            min-width: 40px;
+        }
+        .num { 
+            border-bottom: 2px solid var(--main); 
+            width: 100%; 
+            text-align: center; 
+            font-size: 15px;
+            font-weight: 900; 
+            color: var(--main); 
+            padding-bottom: 2px;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        .den { 
+            width: 100%; 
+            text-align: center; 
+            font-size: 15px;
+            font-weight: 900; 
+            color: var(--main); 
+            padding-top: 2px;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        .arrow { 
+            font-size: 28px;
+            font-weight: 900; 
+            padding: 0 4px;
+            min-width: 30px;
+            text-align: center;
+            transform: scaleX(1);
+            text-shadow: 
+                0 0 4px #ff0000,
+                0 0 8px #ff9900,
+                2px 2px 0 #ff0000,
+                -2px -2px 0 #ff9900;
+            background: linear-gradient(45deg, #ff0000, #ff9900);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        .result-final { 
+            font-size: 18px !important;
+            color: var(--orange) !important; 
+            font-weight: 900; 
+            padding: 0 5px;
+            text-shadow: 0 0 5px rgba(255, 152, 0, 0.7);
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            min-width: 50px;
+            text-align: center;
+            justify-content: center;
+        }
+
+        #top-panel { 
+            background: #fff; 
+            height: calc(22vh - (0 * var(--cube-height)) + var(--header-increase));
+            display: flex; 
+            padding: 10px; 
+            border-bottom: 3px solid var(--primary);
+            min-height: calc(200px - (0 * var(--cube-height)) + var(--header-increase));
+        }
+        
+        .header-box { 
+            display: grid; 
+            grid-template-columns: repeat(3, 1fr); 
+            gap: 10px; 
+            width: 100%; 
+        }
+        
+        .exercise-card {
+            background: #fff; 
+            border: 2px solid #ddd; 
+            border-radius: 10px;
+            display: flex; 
+            flex-direction: column; 
+            align-items: center; 
+            padding: 6px; 
+            transition: 0.3s;
+            justify-content: space-between;
+            position: relative;
+            cursor: pointer;
+        }
+        .exercise-card.active { 
+            border-color: var(--accent); 
+            background: #fff9f9; 
+            transform: scale(1.02); 
+        }
+
+        .model-name {
+            font-size: 18px; 
+            font-weight: 900; 
+            color: var(--primary);
+            margin-top: 12px;
+            margin-bottom: 10px; 
+            text-align: center;
+            height: 22px; 
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .progress-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            width: 100%;
+            margin: 6px 0; 
+            min-height: 160px;
+        }
+
+        .progress-wrapper-vertical { 
+            width: 70px;
+            height: 150px;
+            background: #eee; 
+            border: 2px solid #333; 
+            border-radius: 6px; 
+            overflow: hidden; 
+            display: flex; 
+            align-items: flex-end; 
+        }
+        .progress-bar-vertical { 
+            width: 100%; 
+            height: 0%; 
+            transition: height 0.5s; 
+        }
+
+        .pct-label {
+            font-weight: 900; 
+            color: var(--accent); 
+            font-size: 30px;
+            margin-top: 10px; 
+            height: 35px; 
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .buttons-container {
+            display: flex;
+            flex-direction: column;
+            gap: 6px; 
+            width: 100%;
+            margin-top: 6px; 
+        }
+
+        .top-buttons {
+            display: flex;
+            gap: 6px; 
+            justify-content: center;
+        }
+
+        .btn-action { 
+            padding: 8px 12px; 
+            font-size: 12px; 
+            border-radius: 5px; 
+            border: none; 
+            cursor: pointer; 
+            color: white; 
+            font-weight: bold; 
+            min-width: 75px; 
+        }
+        .btn-start { background: var(--primary); }
+        .btn-resume { background: #27ae60; color: white; }
+        .btn-reset { background: #e74c3c; }
+
+        #render-area { 
+            flex: 1 1 auto;
+            position: relative; 
+            background: #2c3e50; 
+            overflow: auto;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin: 5px 0;
+            min-height: 350px;
+            max-height: 55vh;
+            height: 55vh;
+            padding: 15px;
+        }
+        
+        #shapes-grid {
+            display: grid;
+            gap: 18px;
+            padding: 20px;
+            justify-content: center;
+            align-items: center;
+            justify-items: center;
+            width: fit-content;
+            max-width: fit-content;
+            height: fit-content;
+            margin: auto;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 20px;
+            border: 2px solid rgba(255, 255, 255, 0.1);
+            grid-auto-rows: 85px;
+        }
+        
+        .shape-box {
+            width: 85px;
+            height: 85px;
+            border: 2px solid #000;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+            transition: all 0.3s;
+            cursor: pointer;
+            font-size: 28px;
+            font-weight: bold;
+            border-radius: 8px;
+        }
+        
+        .shape-box.white {
+            background-color: white;
+        }
+        
+        .shape-box.colored {
+            background-color: #2ecc71;
+        }
+        
+        .shape-box.selected {
+            background-color: black !important;
+            color: white;
+            font-weight: bold;
+            font-size: 30px;
+            border-color: #fff;
+            box-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
+            transform: scale(1.05);
+        }
+        
+        .shape-box:hover:not(.selected) {
+            transform: scale(1.03);
+            box-shadow: 0 0 8px rgba(255, 255, 255, 0.3);
+        }
+        
+        .wait-ring {
+            position: absolute;
+            width: 85%;
+            height: 85%;
+            border: 3px solid #ff0000;
+            border-radius: 50%;
+            top: 7.5%;
+            left: 7.5%;
+            clip-path: inset(100% 0 0 0);
+            transition: clip-path 0.1s linear;
+            pointer-events: none;
+            z-index: 1;
+        }
+        
+        .wait-ring::after {
+            content: '';
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            border: 3px solid #00ff00;
+            border-radius: 50%;
+            top: -3px;
+            left: -3px;
+            animation: pulse 1.5s infinite;
+        }
+        
+        @keyframes pulse {
+            0% { transform: scale(0.8); opacity: 0.5; }
+            50% { transform: scale(1); opacity: 1; }
+            100% { transform: scale(0.8); opacity: 0.5; }
+        }
+
+        #visual-cursor { 
+            position: fixed; 
+            width: 20px;
+            height: 20px;
+            background: radial-gradient(circle, 
+                rgba(0,255,204,0.9) 0%, 
+                rgba(255,68,68,0.7) 30%, 
+                rgba(0,255,204,0.1) 70%);
+            border: 2px solid #fff; 
+            border-radius: 50%; 
+            pointer-events: none; 
+            z-index: 9999; 
+            transform: translate(-50%, -50%);
+            box-shadow: 
+                0 0 10px var(--main), 
+                0 0 20px var(--main),
+                0 0 10px var(--cursor-red),
+                0 0 20px var(--cursor-red);
+            transition: width 0.2s, height 0.2s;
+            display: none;
+        }
+        #visual-cursor.clicking {
+            width: 16px; 
+            height: 16px;
+            background: radial-gradient(circle, 
+                rgba(255,215,0,1) 0%, 
+                rgba(255,68,68,0.8) 40%, 
+                rgba(255,215,0,0.4) 70%);
+        }
+
+        .sparkle { 
+            position: fixed; 
+            width: 6px; 
+            height: 6px; 
+            border-radius: 50%; 
+            pointer-events: none; 
+            z-index: 9998; 
+            transform: translate(-50%, -50%);
+            animation: sparkleAnim 0.8s ease-out forwards;
+            background: rgba(255, 68, 68, 0.8);
+        }
+        @keyframes sparkleAnim {
+            0% { opacity: 1; transform: translate(-50%, -50%) scale(0); }
+            100% { opacity: 0; transform: translate(-50%, -50%) scale(2); }
+        }
+
+        .glow-trail { 
+            position: fixed; 
+            width: 10px; 
+            height: 10px; 
+            border-radius: 50%; 
+            pointer-events: none; 
+            z-index: 9997; 
+            transform: translate(-50%, -50%);
+            animation: fadeTrail 1s ease-out forwards;
+            background: rgba(255, 68, 68, 0.6);
+        }
+        @keyframes fadeTrail {
+            0% { opacity: 0.6; transform: translate(-50%, -50%) scale(1); }
+            100% { opacity: 0; transform: translate(-50%, -50%) scale(0); }
+        }
+
+        #celebration-message { 
+            position: fixed; 
+            top: 50%; 
+            left: 50%; 
+            transform: translate(-50%, -50%); 
+            background: linear-gradient(135deg, rgba(0,0,0,0.95), rgba(50,50,50,0.95));
+            color: var(--gold); 
+            padding: 25px 40px; 
+            border-radius: 25px; 
+            font-size: 1.8rem; 
+            display: none; 
+            z-index: 5000; 
+            text-align: center; 
+            border: 4px solid var(--gold);
+            box-shadow: 0 0 50px rgba(255,215,0,0.7);
+            animation: celebratePop 0.8s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+            white-space: nowrap;
+        }
+        @keyframes celebratePop { 
+            from { transform: translate(-50%, -50%) scale(0) rotate(-10deg); opacity: 0; } 
+            to { transform: translate(-50%, -50%) scale(1) rotate(0deg); opacity: 1; } 
+        }
+
+        .emoji-particle { 
+            position: fixed; 
+            pointer-events: none; 
+            z-index: 4000; 
+            font-size: 3rem;
+            animation: floatUp 3s ease-out forwards;
+        }
+        @keyframes floatUp {
+            0% { opacity: 1; transform: translate(0, 0) rotate(0deg); }
+            100% { opacity: 0; transform: translate(var(--tx), var(--ty)) rotate(var(--rot)); }
+        }
+
+        #bottom-info-bar { 
+            background: rgba(0,0,0,0.9); 
+            color: white; 
+            padding: 20px 25px;
+            border-top: 3px solid var(--main);
+            position: relative;
+            z-index: 1000;
+            min-height: 100px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            flex-shrink: 0;
+            margin-top: 10px;
+            margin-bottom: 0;
+        }
+        #designer-credit { 
+            background: linear-gradient(90deg, rgba(0,100,100,0.9), rgba(0,150,150,0.9));
+            color: #00ffcc; 
+            text-align: center; 
+            padding: 15px;
+            border-radius: 12px; 
+            border: 2px solid #00ff00; 
+            font-weight: bold; 
+            font-size: 24px;
+            margin-bottom: 12px;
+            text-shadow: 0 0 5px rgba(0,255,204,0.5);
+            box-shadow: 0 0 15px rgba(0,255,0,0.3);
+            width: 100%;
+            line-height: 1.5;
+        }
+        #instructions { 
+            text-align: center; 
+            font-size: 22px;
+            color: #ddd; 
+            font-weight: bold;
+            background: rgba(0,0,0,0.7);
+            padding: 12px 18px;
+            border-radius: 10px;
+            border: 1px solid rgba(255,255,255,0.1);
+            width: 100%;
+            line-height: 1.5;
+        }
+
+        @media (max-width: 1024px) {
+            #header-section {
+                height: calc(140px + (2.5 * var(--cube-height)));
+                min-height: 220px;
+                padding: 6px;
+                gap: 8px;
+            }
+            
+            #camera-wrapper {
+                width: 130px;
+            }
+            
+            .stats-middle-pane {
+                width: 140px;
+            }
+            
+            .stats-box {
+                min-height: 45px;
+                padding: 5px;
+            }
+            
+            .stats-label {
+                font-size: 11px;
+            }
+            
+            .stats-value {
+                font-size: 16px;
+            }
+            
+            .math-box {
+                min-width: 200px;
+                max-width: 220px;
+                min-height: 55px;
+                max-height: 55px;
+                height: 55px;
+            }
+            
+            .box-text {
+                font-size: 11px;
+            }
+            
+            .box-text-stack {
+                min-width: 140px;
+            }
+            
+            .num, .den {
+                font-size: 14px;
+            }
+            
+            .arrow {
+                font-size: 24px;
+            }
+            
+            .result-final {
+                font-size: 16px;
+            }
+            
+            #top-panel {
+                height: calc(20vh - (0 * var(--cube-height)) + var(--header-increase));
+                min-height: calc(180px - (0 * var(--cube-height)) + var(--header-increase));
+            }
+            
+            .progress-wrapper-vertical {
+                width: 65px;
+                height: 140px;
+            }
+            
+            .pct-label {
+                font-size: 28px;
+            }
+            
+            .model-name {
+                font-size: 16px;
+            }
+            
+            #render-area {
+                min-height: 320px;
+                max-height: 45vh;
+                height: 45vh;
+                padding: 15px;
+            }
+            
+            .shape-box {
+                width: 55px;
+                height: 55px;
+                font-size: 22px;
+            }
+            
+            #shapes-grid {
+                gap: 15px;
+                padding: 18px;
+                grid-auto-rows: 55px;
+            }
+            
+            .shape-box.selected {
+                font-size: 24px;
+            }
+            
+            #designer-credit {
+                font-size: 20px;
+                padding: 12px;
+            }
+            
+            #instructions {
+                font-size: 18px;
+                padding: 10px 15px;
+            }
+        }
+
+        @media (max-width: 768px) {
+            #app-container {
+                padding: 3px;
+            }
+            
+            #control-bar {
+                padding: 6px;
+                gap: 8px;
+                flex-direction: column;
+                padding-right: 6px;
+            }
+            
+            #main-menu-btn {
+                top: 5px;
+                right: 5px;
+                padding: 6px 12px;
+                font-size: 12px;
+                min-width: 85px;
+                height: 36px;
+            }
+            
+            .control-section {
+                gap: 6px;
+            }
+            
+            .mode-btn, .model-btn {
+                padding: 6px 12px;
+                font-size: 12px;
+                min-width: 60px;
+                height: 36px;
+            }
+            
+            .shape-label, .control-mode-label {
+                font-size: 14px;
+            }
+            
+            #header-section {
+                flex-direction: column;
+                height: auto;
+                min-height: calc(300px + (2.5 * var(--cube-height)));
+                gap: 8px;
+            }
+            
+            #camera-wrapper {
+                width: 100%;
+                height: 100px;
+                order: 1;
+            }
+            
+            .stats-middle-pane {
+                width: 100%;
+                height: auto;
+                padding: 8px;
+                margin: 6px 0;
+                flex-direction: row;
+                flex-wrap: wrap;
+                justify-content: space-around;
+                order: 2;
+            }
+            
+            .stats-title {
+                width: 100%;
+                margin-bottom: 6px;
+                font-size: 16px;
+                padding: 5px 0;
+                height: 32px;
+            }
+            
+            .stats-box {
+                flex: 1;
+                min-width: 110px;
+                margin: 3px;
+                padding: 5px;
+                min-height: 40px;
+            }
+            
+            .stats-label {
+                font-size: 10px;
+            }
+            
+            .stats-value {
+                font-size: 15px;
+            }
+            
+            .stats-left-pane {
+                width: 100%;
+                min-width: unset;
+                height: auto;
+                padding: 8px;
+                order: 3;
+            }
+            
+            .math-title {
+                height: 32px;
+                font-size: 16px;
+                margin-bottom: 4px;
+            }
+            
+            #current-model-name {
+                font-size: 18px !important;
+            }
+            
+            .math-content {
+                flex-direction: column;
+                gap: 6px;
+            }
+            
+            .math-row {
+                flex-direction: column;
+                gap: 6px;
+                max-height: 48%;
+            }
+            
+            .math-box {
+                min-width: 95%;
+                max-width: 95%;
+                padding: 5px 8px;
+                margin: 0 auto;
+                min-height: 50px;
+                max-height: 50px;
+                height: 50px;
+            }
+            
+            .box-text-stack {
+                min-width: 130px;
+            }
+            
+            .box-text {
+                font-size: 10px;
+            }
+            
+            .arrow {
+                transform: rotate(90deg) scaleX(1);
+                font-size: 22px;
+                margin: 3px 0;
+            }
+            
+            #render-area {
+                min-height: 280px;
+                max-height: 40vh;
+                height: 40vh;
+                padding: 12px;
+            }
+            
+            #top-panel {
+                height: calc(22vh - (0 * var(--cube-height)) + var(--header-increase));
+                min-height: calc(170px - (0 * var(--cube-height)) + var(--header-increase));
+            }
+            
+            .header-box {
+                grid-template-columns: 1fr;
+                gap: 8px;
+            }
+            
+            .exercise-card {
+                padding: 6px;
+            }
+            
+            .model-name {
+                font-size: 16px;
+                height: 22px;
+                margin-top: 8px;
+            }
+            
+            .progress-container {
+                min-height: 150px;
+            }
+            
+            .progress-wrapper-vertical {
+                width: 60px;
+                height: 130px;
+            }
+            
+            .pct-label {
+                font-size: 26px;
+                height: 30px;
+            }
+            
+            .btn-action {
+                padding: 7px 10px;
+                font-size: 11px;
+                min-width: 70px;
+            }
+            
+            .shape-box {
+                width: 50px;
+                height: 50px;
+                font-size: 20px;
+            }
+            
+            #shapes-grid {
+                gap: 12px;
+                padding: 15px;
+                grid-auto-rows: 50px;
+            }
+            
+            .shape-box.selected {
+                font-size: 22px;
+            }
+            
+            #designer-credit {
+                font-size: 18px;
+                padding: 10px;
+            }
+            
+            #instructions {
+                font-size: 16px;
+                padding: 8px 12px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            #control-bar {
+                padding-right: 90px;
+            }
+            
+            #main-menu-btn {
+                min-width: 80px;
+                font-size: 11px;
+                padding: 5px 10px;
+            }
+            
+            .shape-label, .control-mode-label {
+                font-size: 13px;
+            }
+            
+            .control-section {
+                gap: 5px;
+            }
+            
+            .math-box {
+                padding: 4px 6px;
+                min-height: 45px;
+                max-height: 45px;
+                height: 45px;
+            }
+            
+            .box-text {
+                font-size: 9px;
+            }
+            
+            .box-text-stack {
+                min-width: 110px;
+                margin-right: 5px;
+            }
+            
+            .num, .den {
+                font-size: 12px;
+            }
+            
+            .stats-title {
+                font-size: 14px;
+                height: 28px;
+            }
+            
+            .stats-box {
+                min-width: 90px;
+                padding: 4px;
+                min-height: 35px;
+            }
+            
+            .stats-label {
+                font-size: 9px;
+            }
+            
+            .stats-value {
+                font-size: 13px;
+            }
+            
+            #current-model-name {
+                font-size: 16px !important;
+            }
+            
+            .math-title {
+                font-size: 14px;
+                height: 28px;
+            }
+        }
+    </style>
+</head>
+<body>
+
+<button id="main-menu-btn" onclick="location.href='الرئيسية.html'">🏠 القائمة الرئيسية</button>
+
+<div id="visual-cursor"></div>
+
+<div id="celebration-message">
+    ممتاز وأحسنت يا بطل
+    ✨❤️🎁🤍⭐🏅🎶💎🌙🏆
+</div>
+
+<div id="app-container">
+    <div id="control-bar">
+        <div class="control-section">
+            <span class="shape-label">الشكل :</span>
+            <button class="model-btn active" onclick="setModel('A')" id="btn-model-A">( A )</button>
+            <button class="model-btn" onclick="setModel('B')" id="btn-model-B">( B )</button>
+            <button class="model-btn" onclick="setModel('C')" id="btn-model-C">( C )</button>
+            <span class="separator">↔️</span>
+            <span class="control-mode-label" id="control-mode-label">التحكم :</span>
+        </div>
+        <div class="control-section">
+            <button class="mode-btn active" onclick="setMode('touch')" id="btn-touch">👆 اللمس</button>
+            <button class="mode-btn" onclick="setMode('mouse')" id="btn-mouse">🖱️ الماوس</button>
+            <button class="mode-btn camera-btn" onclick="setMode('camera')" id="btn-camera">📷 الكاميرا</button>
+        </div>
+    </div>
+
+    <div id="header-section">
+        <div id="camera-wrapper">
+            <video id="camera-feed" autoplay playsinline muted></video>
+        </div>
+
+        <div class="stats-middle-pane">
+            <div class="stats-title">الإحصاء</div>
+            <div class="stats-box">
+                <div class="stats-label">عدد المربعات الكلي : </div>
+                <div class="stats-value" id="val-total">20</div>
+            </div>
+            <div class="stats-box">
+                <div class="stats-label">عدد المربعات ⬜ : </div>
+                <div class="stats-value" id="val-white-total">8</div>
+            </div>
+            <div class="stats-box">
+                <div class="stats-label" id="colored-text">عدد المربعات 🟩 : </div>
+                <div class="stats-value" id="val-colored-total">12</div>
+            </div>
+        </div>
+
+        <div class="stats-left-pane">
+            <div class="math-title">
+                <span>العمليّة الحسابيّة بالتفصيل</span>
+                <span id="current-model-name" style="color: #ff4444; font-size: 20px;">الشكل ( A )</span>
+            </div>
+            <div id="math-display" class="math-content"></div>
+        </div>
+    </div>
+
+    <div id="top-panel">
+        <div class="header-box" id="cards-container"></div>
+    </div>
+
+    <div id="render-area">
+        <div id="shapes-grid"></div>
+    </div>
+
+    <div id="bottom-info-bar">
+        <div id="designer-credit">تصميم المهندس : زين العابدين مصطفى Žąëŋ</div>
+        <div id="instructions">اختر الشكل ثم طريقة التحكم واضغط "ابدأ" على التمرين</div>
+    </div>
+</div>
+
+<script>
+    const emojis = ['🦋', '🎊', '🎶', '🎉', '🎈', '🎁', '🎀', '🌸', '🌞', '🕊️', '🍬', '🍭', '🧁', '🤍', '🧸', '🌙', '🔥', '🐥', '🎵'];
+    let currentMode = 'touch';
+    let cameraStream = null;
+    let trackingActive = false;
+    let lastX = window.innerWidth / 2, lastY = window.innerHeight / 2;
+    let hoverTarget = null, hoverStartTime = 0;
+    const DWELL_TIME = 1000;
+    const SMOOTHING = 0.05;
+    let lastValidPosition = { x: window.innerWidth / 2, y: window.innerHeight / 2 };
+    
+    let lastSoundTime = 0;
+    const soundInterval = 120;
+    let audioCtx = null;
+    
+    const sparkleColors = ['#ff4444', '#4e9cd4', '#ffdd44', '#ff8811', '#5a2d7a', '#1a836f', '#ff5599'];
+    
+    let models = {
+        A: { 
+            name: "الشكل ( A )",
+            total: 20, 
+            white: 8, 
+            colored: 12,
+            div: 2,
+            mult: 10, 
+            targetResult: 40,
+            color: '#2ecc71',
+            emoji: '🟩',
+            selections: [],
+            solved: 0,
+            rows: 2,
+            cols: 10
+        },
+        B: { 
+            name: "الشكل ( B )",
+            total: 60, 
+            white: 24, 
+            colored: 36,
+            div: 6, 
+            mult: 10, 
+            targetResult: 40,
+            color: '#e67e22',
+            emoji: '🟧',
+            selections: [],
+            solved: 0,
+            rows: 6,
+            cols: 10
+        },
+        C: { 
+            name: "الشكل ( C )",
+            total: 40, 
+            white: 28, 
+            colored: 12,
+            div: 4, 
+            mult: 10, 
+            targetResult: 70,
+            color: '#3498db',
+            emoji: '🟦',
+            selections: [],
+            solved: 0,
+            rows: 10,
+            cols: 4
+        }
+    };
+    
+    let currentModel = 'A';
+
+    function getAudioContext() {
+        if (!audioCtx) {
+            audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            if (window.appSystem) {
+                window.appSystem.audioContext = audioCtx;
+            }
+        }
+        if (audioCtx.state === 'suspended') audioCtx.resume();
+        return audioCtx;
+    }
+
+    const moveFrequencies = [330, 392, 440, 523, 587, 659, 784];
+    function playMoveSound() {
+        const now = Date.now();
+        if (now - lastSoundTime < soundInterval) return;
+        lastSoundTime = now;
+        
+        const freq = moveFrequencies[Math.floor(Math.random() * moveFrequencies.length)];
+        const type = ['sine', 'triangle', 'sawtooth'][Math.floor(Math.random() * 3)];
+        playNote(freq, type, 0.12, 0.06);
+    }
+
+    function playNote(freq, type = 'sine', duration = 0.15, vol = 0.08) {
+        try {
+            const ctx = getAudioContext();
+            const osc = ctx.createOscillator();
+            const g = ctx.createGain();
+            osc.type = type;
+            osc.frequency.setValueAtTime(freq, ctx.currentTime);
+            g.gain.setValueAtTime(vol, ctx.currentTime);
+            g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + duration);
+            osc.connect(g); g.connect(ctx.destination);
+            osc.start(); osc.stop(ctx.currentTime + duration);
+        } catch(e) {}
+    }
+
+    function playSuccessSound() {
+        playNote(784, 'sine', 0.2, 0.15);
+    }
+
+    function playWinSound() {
+        const notes = [659, 784, 880, 1047, 1175, 1047, 880, 784, 659, 784, 880, 1047];
+        notes.forEach((n, i) => {
+            const delay = i * 120;
+            setTimeout(() => playNote(n, 'square', 0.2, 0.15), delay);
+            setTimeout(() => playNote(n * 1.5, 'sine', 0.25, 0.12), delay + 50);
+        });
+    }
+
+    function createSparkle(x, y) {
+        const s = document.createElement('div');
+        s.className = 'sparkle';
+        const color = sparkleColors[Math.floor(Math.random() * sparkleColors.length)];
+        s.style.background = `radial-gradient(circle, ${color} 0%, transparent 100%)`;
+        s.style.left = x + 'px';
+        s.style.top = y + 'px';
+        document.body.appendChild(s);
+        setTimeout(() => s.remove(), 800);
+    }
+
+    function createGlowTrail(x, y) {
+        const t = document.createElement('div');
+        t.className = 'glow-trail';
+        const color = sparkleColors[Math.floor(Math.random() * sparkleColors.length)];
+        t.style.background = `rgba(${parseInt(color.slice(1,3),16)}, ${parseInt(color.slice(3,5),16)}, ${parseInt(color.slice(5,7),16)}, 0.6)`;
+        t.style.left = x + 'px';
+        t.style.top = y + 'px';
+        document.body.appendChild(t);
+        setTimeout(() => t.remove(), 1000);
+    }
+
+    function spawnCelebration(x, y, count = 30) {
+        for (let i = 0; i < count; i++) {
+            const el = document.createElement('div');
+            el.className = 'emoji-particle';
+            el.innerText = emojis[Math.floor(Math.random() * emojis.length)];
+            el.style.left = x + 'px'; 
+            el.style.top = y + 'px';
+            document.body.appendChild(el);
+            
+            const angle = Math.random() * Math.PI * 2;
+            const distance = 150 + Math.random() * 300;
+            const tx = Math.cos(angle) * distance;
+            const ty = Math.sin(angle) * distance - 100;
+            const rot = Math.random() * 720 - 360;
+            
+            el.style.setProperty('--tx', tx + 'px');
+            el.style.setProperty('--ty', ty + 'px');
+            el.style.setProperty('--rot', rot + 'deg');
+            
+            setTimeout(() => el.remove(), 3000);
+        }
+    }
+
+    function moveCursor(x, y, instant = false) {
+        const cursor = document.getElementById('visual-cursor');
+        
+        if (instant) {
+            lastX = x; lastY = y;
+            lastValidPosition = { x, y };
+        } else {
+            lastX += (x - lastX) * SMOOTHING;
+            lastY += (y - lastY) * SMOOTHING;
+            lastValidPosition = { x: lastX, y: lastY };
+        }
+        
+        cursor.style.left = lastX + 'px';
+        cursor.style.top = lastY + 'px';
+        
+        if (!instant) {
+            playMoveSound();
+            if (Math.random() > 0.5) createSparkle(lastX, lastY);
+            if (Math.random() > 0.6) createGlowTrail(lastX, lastY);
+        }
+        
+        checkHover(lastX, lastY);
+    }
+
+    function checkHover(x, y) {
+        if (!currentGroup) return;
+        
+        const elements = document.elementsFromPoint(x, y);
+        const box = elements.find(el => el.classList && el.classList.contains('shape-box') && el.classList.contains('white') && !el.classList.contains('selected'));
+        
+        if (box) {
+            if (hoverTarget !== box) {
+                clearHoverRing();
+                hoverTarget = box;
+                hoverStartTime = Date.now();
+                
+                if (currentMode === 'camera') {
+                    let ring = box.querySelector('.wait-ring');
+                    if (!ring) {
+                        ring = document.createElement('div');
+                        ring.className = 'wait-ring';
+                        box.appendChild(ring);
+                    }
+                }
+            }
+            
+            if (currentMode === 'camera') {
+                const elapsed = Date.now() - hoverStartTime;
+                const progress = Math.min((elapsed / DWELL_TIME) * 100, 100);
+                
+                let ring = box.querySelector('.wait-ring');
+                if (ring) {
+                    ring.style.clipPath = `inset(${100 - progress}% 0 0 0)`;
+                }
+                
+                if (elapsed >= DWELL_TIME) {
+                    selectBox(box);
+                    clearHoverRing();
+                    hoverTarget = null;
+                }
+            }
+        } else {
+            clearHoverRing();
+            hoverTarget = null;
+        }
+    }
+
+    function clearHoverRing() {
+        if (hoverTarget) {
+            const ring = hoverTarget.querySelector('.wait-ring');
+            if (ring) ring.remove();
+        }
+        hoverTarget = null;
+    }
+
+    function setMode(mode) {
+        currentMode = mode;
+        
+        document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
+        document.getElementById('btn-' + mode).classList.add('active');
+        
+        if (mode !== 'camera') {
+            stopCamera();
+        } else {
+            startCamera();
+        }
+        
+        const instructions = {
+            'touch': `👆 المس المربعات البيضاء لاختيارها`,
+            'mouse': `🖱️ حرك المؤشر فوق المربعات وانقر مرتين لتحديدها`,
+            'camera': `📷 حرك يدك أمام الكاميرا للتحكم بالمؤشر`
+        };
+        document.getElementById('instructions').textContent = instructions[mode];
+        
+        updateControlLabelColor();
+        
+        const cursor = document.getElementById('visual-cursor');
+        cursor.style.display = 'block';
+    }
+
+    function updateControlLabelColor() {
+        const label = document.getElementById('control-mode-label');
+        if (currentMode === 'touch') {
+            label.style.color = '#00ffcc';
+        } else if (currentMode === 'mouse') {
+            label.style.color = '#ffffff';
+        } else if (currentMode === 'camera') {
+            label.style.color = '#ff0';
+        }
+    }
+
+    async function startCamera() {
+        document.getElementById('camera-wrapper').style.display = 'block';
+        try {
+            fixCameraForAll();
+            
+            cameraStream = await navigator.mediaDevices.getUserMedia({
+                video: { 
+                    facingMode: 'user',
+                    width: { ideal: 320 },
+                    height: { ideal: 240 }
+                }
+            });
+            
+            const video = document.getElementById('camera-feed');
+            video.srcObject = cameraStream;
+            
+            video.onloadedmetadata = () => {
+                video.play();
+                startColorTracking();
+            };
+        } catch (err) {
+            document.getElementById('camera-wrapper').innerHTML = 
+                "<div style='color:white; text-align:center; padding:15px; font-size:16px; background:#600;'>⚠️ الكاميرا لا تعمل بدون اتصال بالإنترنت<br>استخدم اللمس أو الماوس</div>";
+        }
+    }
+
+    function stopCamera() {
+        trackingActive = false;
+        if (cameraStream) {
+            cameraStream.getTracks().forEach(track => track.stop());
+            cameraStream = null;
+        }
+        document.getElementById('camera-wrapper').style.display = 'none';
+    }
+
+    function startColorTracking() {
+        if (!cameraStream) return;
+        
+        trackingActive = true;
+        const video = document.getElementById('camera-feed');
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d', { willReadFrequently: true });
+        canvas.width = 160;
+        canvas.height = 120;
+        
+        function track() {
+            if (!trackingActive || currentMode !== 'camera') return;
+            
+            try {
+                ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+                const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                const data = imageData.data;
+                
+                let sumX = 0, sumY = 0, count = 0;
+                
+                for (let y = 0; y < canvas.height; y += 3) {
+                    for (let x = 0; x < canvas.width; x += 3) {
+                        const i = (y * canvas.width + x) * 4;
+                        const r = data[i], g = data[i+1], b = data[i+2];
+                        
+                        if (isSkinColor(r, g, b)) {
+                            sumX += x;
+                            sumY += y;
+                            count++;
+                        }
+                    }
+                }
+                
+                if (count > 30) {
+                    const avgX = sumX / count;
+                    const avgY = sumY / count;
+                    
+                    const screenX = (1 - avgX / canvas.width) * window.innerWidth;
+                    const screenY = (avgY / canvas.height) * window.innerHeight;
+                    
+                    moveCursor(screenX, screenY);
+                    lastValidPosition = { x: screenX, y: screenY };
+                } else {
+                    moveCursor(lastValidPosition.x, lastValidPosition.y, true);
+                }
+            } catch(e) {}
+            
+            if (trackingActive) {
+                requestAnimationFrame(track);
+            }
+        }
+        
+        track();
+    }
+
+    function isSkinColor(r, g, b) {
+        const max = Math.max(r, g, b);
+        const min = Math.min(r, g, b);
+        
+        return r > 95 && g > 40 && b > 20 &&
+               r > g && r > b &&
+               (max - min) > 15 &&
+               Math.abs(r - g) > 15;
+    }
+
+    let lastClickTime = 0;
+    
+    document.addEventListener('touchstart', (e) => {
+        if (currentMode !== 'touch') return;
+        const touch = e.touches[0];
+        moveCursor(touch.clientX, touch.clientY, true);
+        
+        const now = Date.now();
+        if (now - lastClickTime < 300) {
+            const elements = document.elementsFromPoint(touch.clientX, touch.clientY);
+            const box = elements.find(el => el.classList && el.classList.contains('shape-box'));
+            if (box && box.classList.contains('white') && !box.classList.contains('selected')) {
+                selectBox(box);
+            }
+        }
+        lastClickTime = now;
+    }, { passive: true });
+
+    document.addEventListener('touchmove', (e) => {
+        if (currentMode !== 'touch') return;
+        const touch = e.touches[0];
+        moveCursor(touch.clientX, touch.clientY);
+    }, { passive: true });
+
+    document.addEventListener('mousemove', (e) => {
+        if (currentMode !== 'mouse') return;
+        moveCursor(e.clientX, e.clientY);
+    });
+
+    document.addEventListener('click', (e) => {
+        if (currentMode !== 'mouse') return;
+        const now = Date.now();
+        if (now - lastClickTime < 300) {
+            const elements = document.elementsFromPoint(e.clientX, e.clientY);
+            const box = elements.find(el => el.classList && el.classList.contains('shape-box'));
+            if (box && box.classList.contains('white') && !box.classList.contains('selected')) {
+                selectBox(box);
+            }
+        }
+        lastClickTime = now;
+    });
+
+    let currentGroup = null;
+
+    function init() {
+        renderCards();
+        startEx('A', true);
+        
+        const cursor = document.getElementById('visual-cursor');
+        cursor.style.left = (window.innerWidth / 2) + 'px';
+        cursor.style.top = (window.innerHeight / 2) + 'px';
+        cursor.style.display = 'block';
+        lastValidPosition = { x: window.innerWidth / 2, y: window.innerHeight / 2 };
+
+        setMode('touch');
+        updateControlLabelColor();
+        updateStatsConstants();
+        
+        window.addEventListener('resize', () => {
+            if (currentGroup) {
+                buildShapes(currentModel);
+            }
+        });
+    }
+
+    function setModel(model) {
+        currentModel = model;
+        document.querySelectorAll('.model-btn').forEach(b => b.classList.remove('active'));
+        document.getElementById('btn-model-' + model).classList.add('active');
+        
+        document.getElementById('current-model-name').innerText = models[model].name;
+        
+        document.getElementById('colored-text').innerHTML = `عدد المربعات ${models[model].emoji} : `;
+        
+        document.querySelectorAll('.exercise-card').forEach(c => c.classList.remove('active'));
+        document.getElementById('card-' + model).classList.add('active');
+        
+        startEx(model, true);
+        
+        updateStatsConstants();
+    }
+
+    function updateUI() {
+        const model = models[currentModel];
+        
+        document.getElementById('val-total').innerText = model.total;
+        
+        const display = document.getElementById('math-display');
+        
+        if (model.solved === 0) {
+            display.innerHTML = `
+                <div style="text-align: center; color: #aaa; padding: 25px 12px;">
+                    <div style="font-size: 18px; margin-bottom: 10px;">👈</div>
+                    <div style="font-size: 14px;">اختر مربعًا أبيض لبدء الحساب</div>
+                    <div style="font-size: 11px; margin-top: 6px; color: #888;">سوف تظهر هنا العملية الحسابية بالتفصيل</div>
+                </div>
+            `;
+            return;
+        }
+        
+        const step1_n = model.solved;
+        const step1_d = model.total;
+        
+        const step2_n = model.solved / model.div;
+        const step2_d = model.total / model.div;
+        
+        const step3_n = step2_n * model.mult;
+        const step3_d = step2_d * model.mult;
+        
+        const finalResult = Math.round((model.solved / model.total) * 100);
+        
+        const formatNumber = (num) => {
+            return parseFloat(num.toFixed(2));
+        };
+        
+        display.innerHTML = `
+            <div class="math-row">
+                <div class="math-box" style="border: 2px solid #2ecc71;">
+                    <div class="step-number">1</div>
+                    <div class="box-text-stack">
+                        <span class="box-text">البسط هو عدد المربعات البيضاء</span>
+                        <span class="box-text">المقام هو عدد المربعات الكلي</span>
+                    </div>
+                    <div class="fraction-container">
+                        <div class="fraction"><span class="num">${step1_n}</span><span class="den">${step1_d}</span></div>
+                    </div>
+                </div>
+
+                <div class="arrow">←</div>
+
+                <div class="math-box" style="border: 2px solid #9b59b6;">
+                    <div class="step-number">2</div>
+                    <div class="box-text-stack">
+                        <span class="box-text">نقسم البسط والمقام</span>
+                        <span class="box-text">على الرقم ( ${model.div} ) فتصبح : </span>
+                    </div>
+                    <div class="fraction-container">
+                        <div class="fraction"><span class="num">${formatNumber(step2_n)}</span><span class="den">${formatNumber(step2_d)}</span></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="math-row">
+                <div class="math-box" style="border: 2px solid #e74c3c;">
+                    <div class="step-number">3</div>
+                    <div class="box-text-stack">
+                        <span class="box-text">ثم نضرب البسط والمقام</span>
+                        <span class="box-text">بالرقم ( 10 ) فيصبح : </span>
+                    </div>
+                    <div class="fraction-container">
+                        <div class="fraction"><span class="num">${formatNumber(step3_n)}</span><span class="den">${formatNumber(step3_d)}</span></div>
+                    </div>
+                </div>
+
+                <div class="arrow">←</div>
+
+                <div class="math-box" style="border: 2px solid #f39c12;">
+                    <div class="step-number">4</div>
+                    <div class="box-text-stack">
+                        <span class="box-text">نقسم البسط على المقام</span>
+                        <span class="box-text">فيصبح الناتج النهائي : </span>
+                    </div>
+                    <div class="result-final">${finalResult} %</div>
+                </div>
+            </div>`;
+    }
+
+    function updateStatsConstants() {
+        const model = models[currentModel];
+        document.getElementById('val-white-total').innerText = model.white;
+        document.getElementById('val-colored-total').innerText = model.colored;
+    }
+
+    function renderCards() {
+        const container = document.getElementById('cards-container');
+        container.innerHTML = '';
+        
+        Object.keys(models).forEach(id => {
+            const isActive = id === currentModel;
+            const model = models[id];
+            const pct = Math.round((model.solved / model.total) * 100);
+            
+            const card = document.createElement('div');
+            card.className = `exercise-card ${isActive?'active':''}`;
+            card.id = `card-${id}`;
+            
+            card.innerHTML = `
+                <div class="model-name">${model.name}</div>
+                <div class="progress-container">
+                    <div class="progress-wrapper-vertical">
+                        <div id="bar-${id}" class="progress-bar-vertical" style="background:${model.color}; height:${pct}%"></div>
+                    </div>
+                    <div class="pct-label" id="txt-${id}">${pct} %</div>
+                </div>
+                <div class="buttons-container">
+                    <div class="top-buttons">
+                        <button class="btn-action btn-start">ابدأ</button>
+                        <button class="btn-action btn-resume" id="res-${id}" style="${model.solved > 0 && model.solved < model.white ? 'display:inline-block' : 'display:none'}">استئناف</button>
+                    </div>
+                    <button class="btn-action btn-reset">إعادة ضبط</button>
+                </div>
+            `;
+            
+            container.appendChild(card);
+            
+            const btnStart = card.querySelector('.btn-start');
+            const btnResume = card.querySelector('.btn-resume');
+            const btnReset = card.querySelector('.btn-reset');
+            
+            btnStart.onclick = e => {
+                e.stopPropagation();
+                setModel(id);
+                startEx(id, false);
+            };
+            
+            btnResume.onclick = e => {
+                e.stopPropagation();
+                setModel(id);
+                startEx(id, true);
+            };
+            
+            btnReset.onclick = e => {
+                e.stopPropagation();
+                resetEx(id);
+            };
+            
+            card.onclick = () => {
+                if (currentModel !== id) {
+                    setModel(id);
+                }
+            };
+        });
+    }
+
+    function startEx(id, resume) {
+        currentModel = id;
+        currentGroup = models[id];
+        
+        if (!resume) {
+            models[id].solved = 0;
+            models[id].selections = [];
+        }
+        
+        updateProgressBar(id);
+        updateUI();
+        
+        buildShapes(id);
+        
+        document.getElementById('res-'+id).style.display = 'none';
+        
+        Object.keys(models).forEach(otherId => {
+            if (otherId !== id && models[otherId].solved > 0 && models[otherId].solved < models[otherId].white) {
+                document.getElementById('res-'+otherId).style.display = 'inline-block';
+            }
+        });
+    }
+
+    function checkPattern(id, r, c) {
+        if (id === 'A') {
+            return (c < 2 || c > 7);
+        } else if (id === 'B') {
+            return (c < 2 || c > 7);
+        } else if (id === 'C') {
+            return !((r>=1 && r<=3 && c>=1 && c<=2) || (r>=6 && r<=8 && c>=1 && c<=2));
+        }
+        return false;
+    }
+
+    function buildShapes(id) {
+        const grid = document.getElementById('shapes-grid');
+        grid.innerHTML = '';
+        
+        const model = models[id];
+        const rows = model.rows;
+        const cols = model.cols;
+        
+        grid.style.gridTemplateColumns = `repeat(${cols}, 1fr)`;
+        grid.style.gridTemplateRows = `repeat(${rows}, 1fr)`;
+        
+        for (let r = 0; r < rows; r++) {
+            for (let c = 0; c < cols; c++) {
+                const idx = r * cols + c;
+                const isWhite = checkPattern(id, r, c);
+                const isSelected = model.selections.includes(idx);
+                
+                const box = document.createElement('div');
+                box.className = `shape-box ${isWhite ? 'white' : 'colored'} ${isSelected ? 'selected' : ''}`;
+                box.dataset.id = idx;
+                box.dataset.row = r;
+                box.dataset.col = c;
+                
+                if (isSelected) {
+                    const order = model.selections.indexOf(idx) + 1;
+                    box.textContent = order;
+                    box.style.backgroundColor = 'black';
+                    box.style.color = 'white';
+                } else if (isWhite) {
+                    box.style.backgroundColor = 'white';
+                } else {
+                    box.style.backgroundColor = model.color;
+                }
+                
+                box.addEventListener('click', () => {
+                    if (currentMode === 'touch' || currentMode === 'mouse') {
+                        handleBoxClick(box);
+                    }
+                });
+                
+                grid.appendChild(box);
+            }
+        }
+        
+        grid.style.margin = 'auto';
+    }
+
+    function handleBoxClick(box) {
+        if (!box.classList.contains('white') || box.classList.contains('selected')) return;
+        
+        const model = models[currentModel];
+        const id = parseInt(box.dataset.id);
+        
+        if (model.selections.includes(id)) return;
+        
+        box.classList.add('selected');
+        const order = model.selections.length + 1;
+        box.textContent = order;
+        box.style.backgroundColor = 'black';
+        box.style.color = 'white';
+        
+        model.solved++;
+        model.selections.push(id);
+        
+        playSuccessSound();
+        const rect = box.getBoundingClientRect();
+        const x = rect.left + rect.width / 2;
+        const y = rect.top + rect.height / 2;
+        spawnCelebration(x, y, 15);
+        
+        updateUI();
+        updateProgressBar(currentModel);
+
+        if (model.solved === model.white) {
+            triggerCelebration();
+        }
+        
+        if (model.solved > 0 && model.solved < model.white) {
+            document.getElementById('res-'+currentModel).style.display = 'inline-block';
+        }
+    }
+
+    function selectBox(box) {
+        if (!box.classList.contains('white') || box.classList.contains('selected')) return;
+        
+        const model = models[currentModel];
+        const id = parseInt(box.dataset.id);
+        
+        if (model.selections.includes(id)) return;
+        
+        box.classList.add('selected');
+        const order = model.selections.length + 1;
+        box.textContent = order;
+        box.style.backgroundColor = 'black';
+        box.style.color = 'white';
+        
+        model.solved++;
+        model.selections.push(id);
+        
+        playSuccessSound();
+        const rect = box.getBoundingClientRect();
+        const x = rect.left + rect.width / 2;
+        const y = rect.top + rect.height / 2;
+        spawnCelebration(x, y, 15);
+        
+        updateUI();
+        updateProgressBar(currentModel);
+
+        if (model.solved === model.white) {
+            triggerCelebration();
+        }
+        
+        if (model.solved > 0 && model.solved < model.white) {
+            document.getElementById('res-'+currentModel).style.display = 'inline-block';
+        }
+    }
+
+    function updateProgressBar(id) {
+        const model = models[id];
+        const pct = Math.round((model.solved / model.total) * 100);
+        document.getElementById('bar-'+id).style.height = pct + '%';
+        document.getElementById('txt-'+id).innerText = pct + ' %';
+    }
+
+    function triggerCelebration() {
+        const modal = document.getElementById('celebration-message');
+        modal.style.display = 'block';
+        playWinSound();
+        spawnCelebration(window.innerWidth/2, window.innerHeight/2, 60);
+        
+        setTimeout(() => {
+            modal.style.display = 'none';
+        }, 3000);
+    }
+
+    function resetEx(id) {
+        models[id].solved = 0;
+        models[id].selections = [];
+        
+        updateProgressBar(id);
+        buildShapes(id);
+        updateUI();
+        
+        document.getElementById('res-'+id).style.display = 'none';
+    }
+
+    document.addEventListener('click', () => getAudioContext(), { once: true });
+    document.addEventListener('touchstart', () => getAudioContext(), { once: true });
+
+    window.onload = init;
+</script>
+
+<script>
+if (typeof getAudioContext === 'function') {
+    const originalGetAudioContext = getAudioContext;
+    getAudioContext = function() {
+        if (window.appSystem && window.appSystem.audioContext) {
+            return window.appSystem.audioContext;
+        }
+        return originalGetAudioContext();
+    };
+}
+
+function initAudioEx3() {
+    if (!window.appSystem.audioContext) {
+        window.appSystem.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+    }
+}
+
+document.addEventListener('click', initAudioEx3, { once: true });
+document.addEventListener('touchstart', initAudioEx3, { once: true });
+
+document.addEventListener('DOMContentLoaded', function() {
+    const btn = document.getElementById('main-menu-btn');
+    if (btn) {
+        btn.onclick = function(e) {
+            e.preventDefault();
+            if (window.goToMainMenu) {
+                window.goToMainMenu();
+            } else if (window.appSystem && window.appSystem.goToMainMenu) {
+                window.appSystem.goToMainMenu();
+            }
+            return false;
+        };
+    }
+});
+
+if (typeof clearHoverRing === 'function') {
+    const originalClearHoverRing = clearHoverRing;
+    clearHoverRing = function() {
+        if (window.appSystem) {
+            window.appSystem.setHoverCleanup(originalClearHoverRing);
+        }
+        return originalClearHoverRing();
+    };
+}
+
+if (typeof startCamera === 'function') {
+    const originalStartCamera = startCamera;
+    startCamera = async function() {
+        try {
+            fixCameraForAll();
+            const stream = await originalStartCamera();
+            if (window.appSystem) {
+                window.appSystem.cameraStream = stream;
+            }
+            return stream;
+        } catch(e) {
+            console.error('كاميرا ex3:', e);
+            throw e;
+        }
+    };
+}
+</script>
+
+<script src="system-config.js"></script>
+<script src="data-manager.js"></script>
+<script src="exercise-helper.js"></script>
+
+</body>
+</html>

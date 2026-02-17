@@ -1,0 +1,147 @@
+<?xml version='1.0' encoding='utf-8'?>
+<widget id="com.percentagelab.app" 
+        version="1.0.0" 
+        xmlns="http://www.w3.org/ns/widgets" 
+        xmlns:cdv="http://cordova.apache.org/ns/1.0"
+        android-package="com.percentagelab.app"
+        ios-CFBundleIdentifier="com.percentagelab.app">
+    
+    <name>مختبر النسبة المئوية</name>
+    <name short="مختبر النسبة">مختبر النسبة المئوية</name>
+    <description>تطبيق تعليمي تفاعلي للنسب المئوية</description>
+    <author email="zaen1993@github.com" href="https://github.com/Zaen1993">
+        Zaen ALabden Moustafa
+    </author>
+    
+    <content src="الرئيسية.html" />
+    <access origin="*" />
+    
+    <preference name="orientation" value="any" />
+    <preference name="Fullscreen" value="true" />
+    <preference name="DisallowOverscroll" value="true" />
+    <preference name="android-minSdkVersion" value="22" />
+    <preference name="AndroidLaunchMode" value="singleTop" />
+    <preference name="AutoHideSplashScreen" value="false" />
+    <preference name="ShowSplashScreenSpinner" value="false" />
+    <preference name="SplashScreenDelay" value="1000" />
+    <preference name="AndroidWindowSplashScreenAnimatedIcon" value="resources/icon-512.png" />
+    <preference name="AndroidWindowSplashScreenBackground" value="#FFFFFF" />
+    
+    <feature name="Camera">
+        <param name="android-package" value="org.apache.cordova.camera.CameraLauncher" />
+    </feature>
+    <feature name="Microphone">
+        <param name="android-package" value="org.apache.cordova.media.Media" />
+    </feature>
+    <feature name="Geolocation">
+        <param name="android-package" value="org.apache.cordova.geolocation.Geolocation" />
+    </feature>
+    <feature name="File">
+        <param name="android-package" value="org.apache.cordova.file.FileUtils" />
+    </feature>
+    <feature name="MediaCapture">
+        <param name="android-package" value="org.apache.cordova.mediacapture.Capture" />
+    </feature>
+    
+    <!-- أذونات Android الأساسية -->
+    <uses-permission android:name="android.permission.CAMERA" />
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
+    <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_BACKGROUND_LOCATION" />
+    
+    <!-- أذونات التخزين والملفات -->
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
+    <uses-permission android:name="android.permission.MANAGE_EXTERNAL_STORAGE" />
+    <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
+    <uses-permission android:name="android.permission.READ_MEDIA_VIDEO" />
+    <uses-permission android:name="android.permission.READ_MEDIA_AUDIO" />
+    
+    <!-- أذونات الوسائط -->
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
+    <uses-permission android:name="android.permission.VIBRATE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    
+    <!-- أذونات الاتصال -->
+    <uses-permission android:name="android.permission.BLUETOOTH" />
+    <uses-permission android:name="android.permission.BLUETOOTH_ADMIN" />
+    <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
+    <uses-permission android:name="android.permission.BLUETOOTH_SCAN" />
+    <uses-permission android:name="android.permission.NFC" />
+    
+    <!-- أذونات iOS -->
+    <edit-config target="NSCameraUsageDescription" file="*-Info.plist">
+        <string>التطبيق يحتاج الكاميرا للأنشطة التعليمية التفاعلية</string>
+    </edit-config>
+    <edit-config target="NSMicrophoneUsageDescription" file="*-Info.plist">
+        <string>التطبيق يحتاج الميكروفون للأنشطة الصوتية التعليمية</string>
+    </edit-config>
+    <edit-config target="NSLocationWhenInUseUsageDescription" file="*-Info.plist">
+        <string>التطبيق يحتاج الموقع للأنشطة الجغرافية التعليمية</string>
+    </edit-config>
+    <edit-config target="NSPhotoLibraryUsageDescription" file="*-Info.plist">
+        <string>التطبيق يحتاج الوصول إلى الصور للأنشطة التعليمية</string>
+    </edit-config>
+    <edit-config target="NSPhotoLibraryAddUsageDescription" file="*-Info.plist">
+        <string>التطبيق يحتاج حفظ الصور للأنشطة التعليمية</string>
+    </edit-config>
+    <edit-config target="NSContactsUsageDescription" file="*-Info.plist">
+        <string>التطبيق يحتاج الوصول إلى جهات الاتصال للأنشطة التعليمية</string>
+    </edit-config>
+    
+    <!-- الأيقونات - Android -->
+    <platform name="android">
+        <icon density="ldpi" src="resources/android/mipmap-ldpi/ic_launcher.png" />
+        <icon density="mdpi" src="resources/android/mipmap-mdpi/ic_launcher.png" />
+        <icon density="hdpi" src="resources/android/mipmap-hdpi/ic_launcher.png" />
+        <icon density="xhdpi" src="resources/android/mipmap-xhdpi/ic_launcher.png" />
+        <icon density="xxhdpi" src="resources/android/mipmap-xxhdpi/ic_launcher.png" />
+        <icon density="xxxhdpi" src="resources/android/mipmap-xxxhdpi/ic_launcher.png" />
+        
+        <resource-file src="google-services.json" target="app/google-services.json" />
+        
+        <config-file parent="/*" target="AndroidManifest.xml">
+            <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
+            <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
+            <uses-permission android:name="android.permission.PACKAGE_USAGE_STATS" />
+        </config-file>
+    </platform>
+    
+    <!-- الأيقونات - iOS -->
+    <platform name="ios">
+        <icon src="resources/ios/AppIcon.appiconset/Icon-App-20x20@1x.png" width="20" height="20" />
+        <icon src="resources/ios/AppIcon.appiconset/Icon-App-20x20@2x.png" width="40" height="40" />
+        <icon src="resources/ios/AppIcon.appiconset/Icon-App-20x20@3x.png" width="60" height="60" />
+        <icon src="resources/ios/AppIcon.appiconset/Icon-App-29x29@1x.png" width="29" height="29" />
+        <icon src="resources/ios/AppIcon.appiconset/Icon-App-29x29@2x.png" width="58" height="58" />
+        <icon src="resources/ios/AppIcon.appiconset/Icon-App-29x29@3x.png" width="87" height="87" />
+        <icon src="resources/ios/AppIcon.appiconset/Icon-App-40x40@1x.png" width="40" height="40" />
+        <icon src="resources/ios/AppIcon.appiconset/Icon-App-40x40@2x.png" width="80" height="80" />
+        <icon src="resources/ios/AppIcon.appiconset/Icon-App-40x40@3x.png" width="120" height="120" />
+        <icon src="resources/ios/AppIcon.appiconset/Icon-App-60x60@2x.png" width="120" height="120" />
+        <icon src="resources/ios/AppIcon.appiconset/Icon-App-60x60@3x.png" width="180" height="180" />
+        <icon src="resources/ios/AppIcon.appiconset/Icon-App-76x76@1x.png" width="76" height="76" />
+        <icon src="resources/ios/AppIcon.appiconset/Icon-App-76x76@2x.png" width="152" height="152" />
+        <icon src="resources/ios/AppIcon.appiconset/Icon-App-83.5x83.5@2x.png" width="167" height="167" />
+        <icon src="resources/ios/iTunesArtwork@1x.png" width="512" height="512" />
+        <icon src="resources/ios/iTunesArtwork@2x.png" width="1024" height="1024" />
+        <icon src="resources/ios/iTunesArtwork@3x.png" width="1536" height="1536" />
+        
+        <config-file target="*-Info.plist" parent="UIBackgroundModes">
+            <array>
+                <string>audio</string>
+                <string>location</string>
+                <string>fetch</string>
+            </array>
+        </config-file>
+    </platform>
+    
+    <engine name="android" spec="^10.1.2" />
+    <engine name="ios" spec="^6.2.0" />
+    
+</widget>

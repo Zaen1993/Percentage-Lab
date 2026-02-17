@@ -1,0 +1,53 @@
+# dependencies
+node_modules/
+package-lock.json
+yarn.lock
+
+# builds
+dist/
+distribute/
+out/
+release/
+
+# system files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# IDE folders
+.idea/
+.vscode/
+*.sublime-*
+*.swp
+*.swo
+*~
+
+# logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+
+# environment and secrets
+.env
+.env.local
+.env.*.local
+system-config.js
+*.pem
+*.key
+
+# testing
+coverage/
+.nyc_output/
+
+# temporary files
+*.tmp
+*.temp
+*.pid
+*.seed
+*.pid.lock
+
+# project specific
+backup_*.json
+pending_data.json

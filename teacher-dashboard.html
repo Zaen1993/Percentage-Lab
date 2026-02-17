@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>لوحة تحكم المعلم - مختبر النسبة المئوية</title>
+    <style>
+        :root {
+            --primary: #2c3e50;
+            --secondary: #3498db;
+            --success: #2ecc71;
+            --warning: #f39c12;
+            --danger: #e74c3c;
+            --light: #ecf0f1;
+            --dark: #2c3e50;
+        }
+        
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f5f7fa; }
+        
+        .header {
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            color: white;
+            padding: 20px;
+            text-align: center;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 20px auto;
+            padding: 20px;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+        }
+        
+        .card {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        .card h3 {
+            color: var(--primary);
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid var(--secondary);
+        }
+        
+        .student-list {
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        
+        .student-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px;
+            border-bottom: 1px solid #eee;
+            transition: background 0.3s;
+        }
+        
+        .student-item:hover {
+            background: var(--light);
+        }
+        
+        .progress-bar {
+            height: 10px;
+            background: #eee;
+            border-radius: 5px;
+            margin: 5px 0;
+            overflow: hidden;
+        }
+        
+        .progress-fill {
+            height: 100%;
+            background: var(--success);
+            transition: width 0.5s;
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+        }
+        
+        .stat-box {
+            text-align: center;
+            padding: 15px;
+            border-radius: 8px;
+            background: var(--light);
+        }
+        
+        .stat-value {
+            font-size: 2em;
+            font-weight: bold;
+            color: var(--primary);
+        }
+        
+        .stat-label {
+            color: #666;
+            font-size: 0.9em;
+        }
+        
+        .btn {
+            background: var(--secondary);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+        
+        .btn:hover {
+            background: #2980b9;
+        }
+        
+        .home-btn {
+            display: inline-block;
+            margin-top: 10px;
+            background: #00ffcc;
+            color: #000;
+            padding: 10px 20px;
+            text-decoration: none;
+            border-radius: 25px;
+            font-weight: bold;
+        }
+        
+        @media (max-width: 768px) {
+            .container {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>📊 لوحة تحكم المعلم - مختبر النسبة المئوية</h1>
+        <p>متابعة وتحليل أداء الطلاب</p>
+    </div>
+    
+    <div class="container">
+        <div class="card">
+            <h3>👨‍🎓 قائمة الطلاب</h3>
+            <div class="student-list" id="studentsList">
+                <!-- سيتم ملؤها بالطلاب -->
+            </div>
+        </div>
+        
+        <div class="card">
+            <h3>📈 إحصائيات عامة</h3>
+            <div class="stats-grid">
+                <div class="stat-box">
+                    <div class="stat-value" id="totalStudents">0</div>
+                    <div class="stat-label">عدد الطلاب</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-value" id="avgScore">0%</div>
+                    <div class="stat-label">متوسط النتائج</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-value" id="completedExercises">0</div>
+                    <div class="stat-label">تمارين مكتملة</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-value" id="activeStudents">0</div>
+                    <div class="stat-label">طلاب نشطين</div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="card">
+            <h3>🎯 تقدم الطلاب حسب التمرين</h3>
+            <div id="exerciseProgress">
+                <!-- سيتم ملؤها -->
+            </div>
+        </div>
+        
+        <div class="card">
+            <h3>📥 أدوات المعلم</h3>
+            <div style="display: flex; flex-direction: column; gap: 10px;">
+                <button class="btn" onclick="exportData()">📄 تصدير النتائج</button>
+                <button class="btn" onclick="generateReport()">📊 إنشاء تقرير</button>
+                <button class="btn" onclick="assignExercise()">➕ تكليف تمرين جديد</button>
+                <button class="btn" onclick="messageStudents()">✉️ مراسلة الطلاب</button>
+            </div>
+        </div>
+    </div>
+    
+    <div style="text-align: center; margin: 20px;">
+        <a href="الرئيسية.html" class="home-btn">🏠 العودة للرئيسية</a>
+    </div>
+    
+    <script src="save-results.js"></script>
+    <script>
+        function loadStudentData() {
+            // محاكاة بيانات الطلاب
+            const mockStudents = [
+                { id: 1, name: 'أحمد محمد', progress: 85, exercises: 12, lastActive: '2024-01-15' },
+                { id: 2, name: 'سارة خالد', progress: 92, exercises: 15, lastActive: '2024-01-15' },
+                { id: 3, name: 'محمد علي', progress: 78, exercises: 10, lastActive: '2024-01-14' },
+                { id: 4, name: 'فاطمة حسن', progress: 95, exercises: 18, lastActive: '2024-01-15' },
+                { id: 5, name: 'خالد إبراهيم', progress: 65, exercises: 8, lastActive: '2024-01-13' }
+            ];
+            
+            const studentsList = document.getElementById('studentsList');
+            studentsList.innerHTML = '';
+            
+            mockStudents.forEach(student => {
+                const studentDiv = document.createElement('div');
+                studentDiv.className = 'student-item';
+                studentDiv.innerHTML = `
+                    <div>
+                        <strong>${student.name}</strong><br>
+                        <small>آخر نشاط: ${student.lastActive}</small>
+                    </div>
+                    <div style="text-align: right;">
+                        <span style="font-weight: bold; color: ${student.progress > 80 ? '#2ecc71' : student.progress > 60 ? '#f39c12' : '#e74c3c'}">
+                            ${student.progress}%
+                        </span><br>
+                        <small>${student.exercises} تمرين</small>
+                        <div class="progress-bar">
+                            <div class="progress-fill" style="width: ${student.progress}%"></div>
+                        </div>
+                    </div>
+                `;
+                studentsList.appendChild(studentDiv);
+            });
+            
+            document.getElementById('totalStudents').textContent = mockStudents.length;
+            document.getElementById('avgScore').textContent = 
+                Math.round(mockStudents.reduce((sum, s) => sum + s.progress, 0) / mockStudents.length) + '%';
+            document.getElementById('completedExercises').textContent = 
+                mockStudents.reduce((sum, s) => sum + s.exercises, 0);
+            document.getElementById('activeStudents').textContent = 
+                mockStudents.filter(s => s.lastActive === '2024-01-15').length;
+        }
+        
+        function exportData() {
+            const results = getLocalResults();
+            if (results.length === 0) {
+                alert('لا توجد بيانات للتصدير');
+                return;
+            }
+            
+            exportResults();
+        }
+        
+        function generateReport() {
+            const report = {
+                date: new Date().toISOString(),
+                summary: 'تقرير أداء الطلاب',
+                students: 5,
+                averageScore: '85%',
+                recommendations: 'تحسين فهم النسب المركبة'
+            };
+            
+            const blob = new Blob([JSON.stringify(report, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `teacher-report-${Date.now()}.json`;
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+        
+        function assignExercise() {
+            const exercise = prompt('أدخل اسم التمرين الجديد:');
+            if (exercise) {
+                alert(`تم تكليف تمرين "${exercise}" للطلاب`);
+            }
+        }
+        
+        function messageStudents() {
+            const message = prompt('أدخل الرسالة للطلاب:');
+            if (message) {
+                alert(`تم إرسال الرسالة: "${message}"`);
+            }
+        }
+        
+        document.addEventListener('DOMContentLoaded', loadStudentData);
+    </script>
+</body>
+</html>

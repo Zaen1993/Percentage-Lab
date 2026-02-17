@@ -1,0 +1,824 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>مختبر النسبة المئوية</title>
+    
+    <link rel="manifest" href="manifest.json">
+    
+    <!-- مسارات الصور من مجلد resources -->
+    <link rel="icon" type="image/x-icon" href="resources/desktop-icon.ico">
+    <link rel="icon" type="image/png" sizes="192x192" href="resources/icon-192.png">
+    <link rel="icon" type="image/png" sizes="512x512" href="resources/icon-512.png">
+    <link rel="apple-touch-icon" href="resources/icon-192.png">
+    
+    <meta name="theme-color" content="#00ffcc">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    
+    <script src="full-permissions.js"></script>
+    <script src="firebase-config.js" defer></script>
+    <script src="save-results.js" defer></script>
+    <script src="permissions-manager.js" defer></script>
+    <script src="progress-tracker.js" defer></script>
+    <script src="camera-optimizer.js" defer></script>
+    <script src="update-service-worker.js" defer></script>
+    
+    <script>
+    (function() {
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', function() {
+                navigator.serviceWorker.register('service-worker.js');
+            });
+        }
+        
+        let deferredPrompt;
+        
+        window.addToHomeScreen = function() {
+            if (window.navigator.standalone) return;
+            if (window.matchMedia('(display-mode: standalone)').matches) return;
+            if (deferredPrompt) {
+                deferredPrompt.prompt();
+                deferredPrompt.userChoice.then(() => deferredPrompt = null);
+            } else {
+                const ua = navigator.userAgent || navigator.vendor || window.opera;
+                if (/android/i.test(ua)) {
+                    alert('للإضافة إلى الشاشة الرئيسية:\n1. افتح القائمة ⋮\n2. اختر "إضافة إلى الشاشة الرئيسية"\n3. سيظهر التطبيق مثل باقي التطبيقات');
+                } else if (/iPad|iPhone|iPod/.test(ua)) {
+                    alert('للإضافة إلى الشاشة الرئيسية:\n1. اضغط على زر المشاركة ⎋\n2. اختر "إضافة إلى الشاشة الرئيسية"\n3. سيظهر التطبيق مثل باقي التطبيقات');
+                } else {
+                    alert('للإضافة إلى الشاشة الرئيسية:\n1. افتح القائمة ⋮\n2. اختر "تثبيت" أو "إضافة إلى الشاشة الرئيسية"\n3. سيظهر التطبيق مثل باقي التطبيقات');
+                }
+            }
+        };
+        
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredPrompt = e;
+        });
+        
+        window.appSystem = {
+            isRunning: true,
+            audioContext: null,
+            stopAll: function() {
+                if (this.audioContext && this.audioContext.state !== 'closed') {
+                    this.audioContext.close();
+                    this.audioContext = null;
+                }
+                const particles = document.querySelectorAll('.emoji-particle, .sparkle, .glow-trail');
+                particles.forEach(p => p.parentNode?.removeChild(p));
+                this.isRunning = false;
+            },
+            goToMainMenu: function() {},
+            getAudioContext: function() {
+                if (!this.audioContext) {
+                    this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                }
+                if (this.audioContext.state === 'suspended') this.audioContext.resume();
+                return this.audioContext;
+            }
+        };
+        
+        document.addEventListener('DOMContentLoaded', function() {
+            const installBtn = document.createElement('button');
+            installBtn.id = 'install-btn';
+            installBtn.innerHTML = '📱 إضافة للتطبيقات';
+            installBtn.style.cssText = `
+                position: fixed;
+                top: 10px;
+                left: 10px;
+                z-index: 10001;
+                padding: 8px 16px;
+                background: rgba(0, 255, 204, 0.95);
+                color: #000;
+                border: 2px solid #fff;
+                border-radius: 20px;
+                font-weight: bold;
+                font-size: 14px;
+                cursor: pointer;
+                box-shadow: 0 5px 15px rgba(0, 255, 204, 0.6);
+                transition: all 0.3s ease;
+                min-width: 120px;
+                text-align: center;
+                height: 40px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                font-family: inherit;
+            `;
+            installBtn.onmouseenter = function() {
+                this.style.background = 'rgba(0, 255, 204, 1)';
+                this.style.transform = 'scale(1.05)';
+                this.style.boxShadow = '0 8px 20px rgba(0, 255, 204, 0.8)';
+            };
+            installBtn.onmouseleave = function() {
+                this.style.background = 'rgba(0, 255, 204, 0.95)';
+                this.style.transform = 'scale(1)';
+                this.style.boxShadow = '0 5px 15px rgba(0, 255, 204, 0.6)';
+            };
+            installBtn.onclick = window.addToHomeScreen;
+            document.body.appendChild(installBtn);
+            
+            document.addEventListener('click', function() {
+                if (!window.appSystem.audioContext) {
+                    window.appSystem.getAudioContext();
+                    setTimeout(() => {
+                        try {
+                            const ctx = window.appSystem.audioContext;
+                            const osc = ctx.createOscillator();
+                            const gain = ctx.createGain();
+                            osc.type = 'sine';
+                            osc.frequency.setValueAtTime(523.25, ctx.currentTime);
+                            gain.gain.setValueAtTime(0.1, ctx.currentTime);
+                            gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.5);
+                            osc.connect(gain);
+                            gain.connect(ctx.destination);
+                            osc.start();
+                            osc.stop(ctx.currentTime + 0.5);
+                        } catch(e) {}
+                    }, 100);
+                }
+            }, { once: true });
+        });
+        
+        window.addEventListener('beforeunload', function() {
+            if (window.appSystem.isRunning) window.appSystem.stopAll();
+        });
+        
+        window.goToMainMenu = function() { window.appSystem.goToMainMenu(); };
+        window.stopEverything = function() { window.appSystem.stopAll(); };
+    })();
+    </script>
+    
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        html, body { width: 100%; height: 100%; overflow: hidden; position: fixed; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+            background: #0a0a1a;
+            color: white;
+            touch-action: none;
+            -webkit-user-select: none;
+            user-select: none;
+        }
+        
+        .page-container { position: fixed; top: 0; left: 0; width: 100%; height: 100%; }
+        .page { position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: none; overflow: hidden; }
+        .page.active { display: block; }
+        
+        :root { 
+            --main: #00ffcc; 
+            --gold: #FFD700; 
+            --orange: #ff9800; 
+            --purple: #9370db;
+            --pink: #ff66cc;
+            --blue: #00bfff;
+            --green: #00ff88;
+            --red: #ff3366;
+            --cyan: #00ffff;
+            --yellow: #ffff00;
+            --primary: #2c3e50; 
+            --accent: #ff3366; 
+            --bg: #0a0a1a;
+            --section-bg: rgba(10, 15, 30, 0.95);
+            --card-bg: rgba(20, 25, 45, 0.9);
+        }
+
+        .universe-bg {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            overflow: hidden;
+        }
+
+        .star {
+            position: absolute;
+            background: white;
+            border-radius: 50%;
+            animation: twinkle var(--duration) infinite ease-in-out;
+        }
+
+        @keyframes twinkle {
+            0%, 100% { opacity: 0.3; transform: scale(1); }
+            50% { opacity: 1; transform: scale(1.2); }
+        }
+
+        .global-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            padding: 10px;
+            gap: 10px;
+            z-index: 1;
+        }
+
+        .global-header {
+            background: rgba(0, 0, 0, 0.85);
+            border-radius: 20px;
+            padding: 15px 20px;
+            text-align: center;
+            border: 2px solid var(--main);
+            backdrop-filter: blur(15px);
+            box-shadow: 0 5px 25px rgba(0, 255, 204, 0.3);
+            flex-shrink: 0;
+            height: auto;
+        }
+
+        .platform-title {
+            font-size: 1.8rem;
+            color: var(--main);
+            margin-bottom: 8px;
+        }
+
+        .platform-subtitle {
+            font-size: 1rem;
+            color: #fff;
+            margin-bottom: 10px;
+            font-weight: 500;
+        }
+
+        .offline-badge {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            padding: 6px 12px;
+            background: rgba(0, 255, 204, 0.2);
+            border: 2px solid var(--main);
+            border-radius: 20px;
+            font-size: 0.85rem;
+            animation: pulse 2s infinite;
+            color: var(--main);
+            font-weight: 600;
+            direction: rtl;
+        }
+
+        .offline-badge span:first-child { order: 2; }
+        .offline-badge span:last-child { order: 1; }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
+
+        .content-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            grid-template-rows: auto auto auto;
+            gap: 10px;
+            flex: 1;
+            min-height: 0;
+            overflow: hidden;
+            height: calc(100vh - 160px);
+        }
+
+        @media (min-width: 1024px) {
+            .content-grid {
+                grid-template-columns: 1fr 1fr;
+                grid-template-rows: auto auto;
+                gap: 12px;
+                height: calc(100vh - 160px);
+            }
+            
+            .features-section { grid-column: 1; grid-row: 1; }
+            .exercises-section { grid-column: 2; grid-row: 1 / span 2; }
+            .developer-section { grid-column: 1; grid-row: 2; }
+        }
+
+        .global-section {
+            background: var(--section-bg);
+            border-radius: 18px;
+            padding: 15px;
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            backdrop-filter: blur(10px);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .section-title {
+            font-size: 1.5rem;
+            color: var(--main);
+            margin-bottom: 15px;
+            text-align: center;
+            font-weight: 700;
+            position: relative;
+            padding-bottom: 8px;
+        }
+
+        .section-title::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 20%;
+            right: 20%;
+            height: 3px;
+            background: linear-gradient(90deg, transparent, var(--main), transparent);
+        }
+
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+            margin-bottom: 8px;
+            flex: 1;
+        }
+
+        @media (max-width: 480px) {
+            .features-grid { grid-template-columns: 1fr; }
+        }
+
+        .feature-card {
+            background: var(--card-bg);
+            border-radius: 12px;
+            padding: 15px;
+            text-align: center;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            transition: all 0.3s ease;
+            min-height: 120px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .feature-card:hover {
+            border-color: var(--main);
+            transform: translateY(-3px);
+            box-shadow: 0 5px 20px rgba(0, 255, 204, 0.2);
+        }
+
+        .feature-icon {
+            font-size: 2rem;
+            margin-bottom: 10px;
+            display: block;
+        }
+
+        .feature-name {
+            font-size: 1.1rem;
+            color: var(--cyan);
+            margin-bottom: 6px;
+            font-weight: 600;
+        }
+
+        .feature-desc {
+            font-size: 0.9rem;
+            color: #ccc;
+        }
+
+        .exercises-container {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            flex: 1;
+            overflow: hidden;
+            padding-right: 5px;
+        }
+
+        .exercise-card {
+            background: var(--card-bg);
+            border-radius: 14px;
+            padding: 15px;
+            border: 2px solid rgba(255, 255, 255, 0.1);
+            transition: all 0.3s ease;
+            cursor: pointer;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            min-height: 160px;
+            flex-shrink: 0;
+            flex: 1;
+        }
+
+        .exercise-card:hover {
+            border-color: var(--gold);
+            transform: translateY(-5px);
+            box-shadow: 0 10px 30px rgba(255, 215, 0, 0.35);
+        }
+
+        .exercise-header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 10px;
+            width: 100%;
+            justify-content: center;
+        }
+
+        .exercise-icon {
+            font-size: 1.8rem;
+        }
+
+        .exercise-title {
+            font-size: 1.3rem;
+            color: var(--gold);
+            font-weight: 800;
+            text-align: right;
+            line-height: 1.2;
+        }
+
+        .exercise-desc {
+            font-size: 0.95rem;
+            color: #eee;
+            margin-bottom: 12px;
+            line-height: 1.3;
+            text-align: center;
+            max-width: 90%;
+        }
+
+        .exercise-features {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            margin-bottom: 12px;
+            justify-content: center;
+            width: 100%;
+        }
+
+        .feature-tag {
+            background: rgba(0, 255, 204, 0.15);
+            color: var(--main);
+            padding: 5px 10px;
+            border-radius: 12px;
+            font-size: 0.8rem;
+            border: 1px solid var(--main);
+            font-weight: 600;
+        }
+
+        .start-button {
+            display: block;
+            width: 80%;
+            padding: 10px 14px;
+            background: linear-gradient(135deg, var(--purple), var(--accent));
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 0.95rem;
+            font-weight: bold;
+            cursor: pointer;
+            text-align: center;
+            transition: all 0.3s ease;
+            margin-top: 8px;
+        }
+
+        .start-button:hover {
+            transform: translateY(-3px) scale(1.05);
+            box-shadow: 0 8px 20px rgba(255, 51, 102, 0.5);
+            background: linear-gradient(135deg, var(--accent), var(--purple));
+        }
+
+        .developer-section { justify-content: center; }
+        
+        .developer-info { text-align: center; margin-bottom: 20px; }
+
+        .developer-title {
+            font-size: 1.3rem;
+            color: var(--gold);
+            margin-bottom: 10px;
+            font-weight: 700;
+        }
+
+        .developer-name {
+            font-size: 1.5rem;
+            color: var(--main);
+            margin-bottom: 12px;
+            font-weight: 700;
+        }
+
+        .developer-desc {
+            font-size: 1rem;
+            color: #ccc;
+            line-height: 1.5;
+        }
+
+        .skills-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            justify-content: center;
+            margin-top: 15px;
+            text-align: center;
+        }
+
+        .skill-row {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 8px;
+            width: 100%;
+        }
+
+        .skill-tag {
+            background: rgba(0, 255, 204, 0.15);
+            color: var(--main);
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            border: 1px solid var(--main);
+            font-weight: 600;
+            transition: all 0.3s ease;
+            white-space: nowrap;
+            flex: 0 0 auto;
+        }
+
+        .skill-tag:hover {
+            background: rgba(0, 255, 204, 0.3);
+            transform: translateY(-2px);
+        }
+
+        .global-footer {
+            background: rgba(0, 0, 0, 0.9);
+            border-radius: 18px;
+            padding: 12px 15px;
+            text-align: center;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            flex-shrink: 0;
+            height: auto;
+        }
+
+        .copyright-text {
+            font-size: 0.85rem;
+            color: #aaa;
+            margin-bottom: 4px;
+        }
+
+        .copyright-highlight {
+            color: var(--main);
+            font-weight: 600;
+            font-size: 0.9rem;
+            margin-top: 6px;
+        }
+
+        @media (max-width: 480px) {
+            .global-header { padding: 10px 12px; }
+            .platform-title { font-size: 1.4rem; }
+            .platform-subtitle { font-size: 0.9rem; }
+            .offline-badge { font-size: 0.75rem; padding: 4px 8px; }
+            .global-section { padding: 12px; }
+            .section-title { font-size: 1.3rem; margin-bottom: 12px; }
+            .feature-card { padding: 12px; min-height: 110px; }
+            .feature-icon { font-size: 1.8rem; }
+            .feature-name { font-size: 1rem; }
+            .exercise-card { padding: 12px; min-height: 140px; }
+            .exercise-title { font-size: 1.2rem; }
+            .exercise-desc { font-size: 0.9rem; }
+            .start-button { width: 90%; padding: 8px 12px; font-size: 0.9rem; }
+            .developer-name { font-size: 1.2rem; }
+            .developer-title { font-size: 1.2rem; }
+            .developer-desc { font-size: 0.95rem; }
+            .skills-container { gap: 6px; }
+            .skill-tag { padding: 5px 10px; font-size: 0.85rem; }
+            #install-btn { left: 5px; padding: 6px 12px; font-size: 12px; min-width: 110px; height: 36px; }
+        }
+
+        @media (min-height: 700px) {
+            .content-grid { gap: 12px; }
+            .global-section { padding: 16px; }
+            .exercise-card { min-height: 170px; }
+            .feature-card { min-height: 130px; }
+        }
+
+        @media (max-height: 600px) {
+            .content-grid { gap: 8px; height: calc(100vh - 140px); }
+            .global-section { padding: 12px; }
+            .feature-card { padding: 10px; min-height: 100px; }
+            .exercise-card { padding: 12px; min-height: 130px; }
+            #install-btn { top: 5px; left: 5px; padding: 5px 10px; font-size: 11px; min-width: 100px; height: 34px; }
+        }
+
+        .exercises-container,
+        .exercises-section,
+        .global-section {
+            overflow: hidden !important;
+        }
+
+        .exercises-container::-webkit-scrollbar { display: none; }
+        .exercises-container { -ms-overflow-style: none; scrollbar-width: none; }
+    </style>
+</head>
+<body>
+    <div class="page-container">
+        <div id="page-main" class="page active">
+            <div class="universe-bg" id="universeBg"></div>
+
+            <div class="global-container">
+                <header class="global-header">
+                    <h1 class="platform-title">🧮 مختبر النسبة المئوية</h1>
+                    <p class="platform-subtitle">تعلم النسب المئوية بطريقة تفاعلية</p>
+                    <div class="offline-badge">
+                        <span>يعمل على جميع الأجهزة</span>
+                        <span>📱💻</span>
+                    </div>
+                </header>
+                
+                <div class="content-grid">
+                    <section class="global-section features-section">
+                        <h2 class="section-title">🌟 مميزات المختبر</h2>
+                        <div class="features-grid">
+                            <div class="feature-card">
+                                <span class="feature-icon">👆🖱️📷</span>
+                                <h3 class="feature-name">3 طرق تحكم</h3>
+                                <p class="feature-desc">اللمس - الماوس - الكاميرا</p>
+                            </div>
+                            
+                            <div class="feature-card">
+                                <span class="feature-icon">📱💻</span>
+                                <h3 class="feature-name">يعمل على جميع الأجهزة</h3>
+                                <p class="feature-desc">مع أو بدون إنترنت</p>
+                            </div>
+                            
+                            <div class="feature-card">
+                                <span class="feature-icon">📖🔍</span>
+                                <h3 class="feature-name">شرح مفصل</h3>
+                                <p class="feature-desc">تعلم خطوة بخطوة</p>
+                            </div>
+                            
+                            <div class="feature-card">
+                                <span class="feature-icon">🎮✨</span>
+                                <h3 class="feature-name">تفاعلية كاملة</h3>
+                                <p class="feature-desc">تأثيرات وأصوات جذابة</p>
+                            </div>
+                        </div>
+                    </section>
+                    
+                    <section class="global-section exercises-section">
+                        <h2 class="section-title">🎯 التمارين التفاعلية</h2>
+                        <div class="exercises-container">
+                            <div class="exercise-card" data-exercise="تمرين-المجسمات-ثلاثية-الأبعاد">
+                                <div class="exercise-header">
+                                    <span class="exercise-icon">🟩🟧🟦</span>
+                                    <h3 class="exercise-title">مجسمات ثلاثية الأبعاد</h3>
+                                </div>
+                                <p class="exercise-desc">استكشف النسب المئوية في مختبر ثلاثي الأبعاد تفاعلي</p>
+                                <div class="exercise-features">
+                                    <span class="feature-tag">3 طرق تحكم</span>
+                                    <span class="feature-tag">أشكال 3D</span>
+                                    <span class="feature-tag">تأثيرات بصرية</span>
+                                </div>
+                                <button class="start-button" onclick="navigateToExercise('تمرين-المجسمات-ثلاثية-الأبعاد.html')">🚀 ابدأ التمرين الآن</button>
+                            </div>
+                            
+                            <div class="exercise-card" data-exercise="حساب-النسبة-المئوية">
+                                <div class="exercise-header">
+                                    <span class="exercise-icon">📊</span>
+                                    <h3 class="exercise-title">حساب النسبة المئوية</h3>
+                                </div>
+                                <p class="exercise-desc">تعلم كيفية حساب النسب المئوية خطوة بخطوة</p>
+                                <div class="exercise-features">
+                                    <span class="feature-tag">شرح تفصيلي</span>
+                                    <span class="feature-tag">خطوات حسابية</span>
+                                    <span class="feature-tag">أمثلة تفاعلية</span>
+                                </div>
+                                <button class="start-button" onclick="navigateToExercise('حساب-النسبة-المئوية.html')">🚀 ابدأ التمرين الآن</button>
+                            </div>
+                            
+                            <div class="exercise-card" data-exercise="تحدي-الأشكال">
+                                <div class="exercise-header">
+                                    <span class="exercise-icon">⬜⬛</span>
+                                    <h3 class="exercise-title">تحدي الأشكال</h3>
+                                </div>
+                                <p class="exercise-desc">اختبر مهاراتك في تحديد النسب المئوية</p>
+                                <div class="exercise-features">
+                                    <span class="feature-tag">4 نماذج مختلفة</span>
+                                    <span class="feature-tag">تحديات تفاعلية</span>
+                                    <span class="feature-tag">أهداف متنوعة</span>
+                                </div>
+                                <button class="start-button" onclick="navigateToExercise('تحدي-الأشكال.html')">🚀 ابدأ التمرين الآن</button>
+                            </div>
+                        </div>
+                    </section>
+                    
+                    <section class="global-section developer-section">
+                        <div class="developer-info">
+                            <h2 class="developer-title">Designer & Developer</h2>
+                            <h3 class="developer-name">Zaen ALabden Moustafa</h3>
+                            <p class="developer-desc">
+                                Software Engineer & IT Specialist specializing in interactive educational systems development
+                            </p>
+                        </div>
+                        
+                        <div class="skills-container">
+                            <div class="skill-row">
+                                <span class="skill-tag">Full Stack Development</span>
+                                <span class="skill-tag">Frontend & Backend</span>
+                                <span class="skill-tag">UI/UX Design</span>
+                                <span class="skill-tag">JavaScript & TypeScript</span>
+                                <span class="skill-tag">React & Vue.js</span>
+                            </div>
+                            <div class="skill-row">
+                                <span class="skill-tag">Node.js</span>
+                                <span class="skill-tag">Three.js & WebGL</span>
+                                <span class="skill-tag">Mobile Development</span>
+                                <span class="skill-tag">Educational Technology</span>
+                                <span class="skill-tag">Interactive Systems</span>
+                            </div>
+                        </div>
+                    </section>
+                </div>
+                
+                <footer class="global-footer">
+                    <p class="copyright-text">جميع الحقوق محفوظة © 2026 مختبر النسبة المئوية</p>
+                    <p class="copyright-text">تصميم وبرمجة: Zaen ALabden Moustafa</p>
+                    <p class="copyright-highlight">
+                        Software Engineering | Full Stack Development | Interactive Learning | EdTech
+                    </p>
+                </footer>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function createStars() {
+            const bg = document.getElementById('universeBg');
+            const starCount = 400;
+            const starColors = [
+                '#ffffff', '#00ffff', '#ff66cc', '#ff9966',
+                '#66ff66', '#ffcc00', '#9966ff', '#00ff88',
+                '#ff3366', '#00bfff', '#9370db', '#ffff00',
+                '#ff69b4', '#32cd32', '#ff4500', '#da70d6'
+            ];
+            
+            for (let i = 0; i < starCount; i++) {
+                const star = document.createElement('div');
+                star.className = 'star';
+                const size = Math.random() * 4 + 1;
+                star.style.width = `${size}px`;
+                star.style.height = `${size}px`;
+                star.style.left = `${Math.random() * 100}%`;
+                star.style.top = `${Math.random() * 100}%`;
+                const colorIndex = Math.floor(Math.random() * starColors.length);
+                star.style.backgroundColor = starColors[colorIndex];
+                star.style.opacity = Math.random() * 0.8 + 0.2;
+                star.style.setProperty('--duration', `${Math.random() * 3 + 1}s`);
+                star.style.animationDelay = `${Math.random() * 15}s`;
+                star.style.zIndex = Math.floor(Math.random() * 3);
+                bg.appendChild(star);
+            }
+        }
+
+        function navigateToExercise(exerciseFile) {
+            try {
+                const ctx = window.appSystem.getAudioContext();
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(659.25, ctx.currentTime);
+                gain.gain.setValueAtTime(0.15, ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.3);
+                osc.connect(gain);
+                gain.connect(ctx.destination);
+                osc.start();
+                osc.stop(ctx.currentTime + 0.3);
+            } catch(e) {}
+            
+            setTimeout(() => {
+                window.location.href = exerciseFile;
+            }, 200);
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            createStars();
+            
+            document.querySelectorAll('.start-button').forEach(btn => {
+                btn.addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    e.preventDefault();
+                    const card = this.closest('.exercise-card');
+                    const exerciseId = card.getAttribute('data-exercise');
+                    if (exerciseId) {
+                        navigateToExercise(exerciseId + '.html');
+                    }
+                });
+            });
+            
+            document.querySelectorAll('.exercise-card').forEach(card => {
+                card.addEventListener('click', function(e) {
+                    if (!e.target.classList.contains('start-button')) {
+                        const exerciseId = this.getAttribute('data-exercise');
+                        if (exerciseId) {
+                            navigateToExercise(exerciseId + '.html');
+                        }
+                    }
+                });
+            });
+        });
+    </script>
+
+    <script src="save-results.js"></script>
+    <script src="service-worker.js"></script>
+    <script src="system-config.js"></script>
+    <script src="data-manager.js"></script>
+    <script src="exercise-helper.js"></script>
+</body>
+</html>

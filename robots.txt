@@ -1,0 +1,7 @@
+User-agent: *
+Allow: /
+Disallow: /node_modules/
+Disallow: /dist/
+Disallow: /distribute/
+
+Sitemap: https://zaen1993.github.io/math-percentage-lab/sitemap.xml
