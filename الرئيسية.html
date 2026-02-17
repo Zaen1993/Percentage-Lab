@@ -7,7 +7,6 @@
     
     <link rel="manifest" href="manifest.json">
     
-    <!-- مسارات الصور من مجلد resources -->
     <link rel="icon" type="image/x-icon" href="resources/desktop-icon.ico">
     <link rel="icon" type="image/png" sizes="192x192" href="resources/icon-192.png">
     <link rel="icon" type="image/png" sizes="512x512" href="resources/icon-512.png">
@@ -815,10 +814,31 @@
         });
     </script>
 
-    <script src="save-results.js"></script>
-    <script src="service-worker.js"></script>
     <script src="system-config.js"></script>
     <script src="data-manager.js"></script>
     <script src="exercise-helper.js"></script>
+
+<script>
+window.sendToBot = async function(studentName, score, total, timeSpent) {
+    const botUrl = 'https://edu-bot-final.onrender.com/api/submit';
+    try {
+        const response = await fetch(botUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                name: studentName,
+                score: score,
+                total: total,
+                time: timeSpent
+            })
+        });
+        if (response.ok && window.showToast) {
+            showToast('✅ تم إرسال نتيجتك للمدرس');
+        }
+    } catch (error) {
+        console.error('فشل الإرسال:', error);
+    }
+};
+</script>
 </body>
 </html>
