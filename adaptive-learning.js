@@ -1,4 +1,3 @@
-// adaptive-learning.js
 const AdaptiveLearning = {
     studentProfiles: {},
     
@@ -85,7 +84,6 @@ const AdaptiveLearning = {
     
     calculateSpeed(timeSpent, questions) {
         const avgTimePerQuestion = timeSpent / questions;
-        
         if (avgTimePerQuestion < 10) return 'fast';
         if (avgTimePerQuestion < 20) return 'medium';
         return 'slow';
@@ -114,11 +112,11 @@ const AdaptiveLearning = {
         const avgKnowledge = totalKnowledge / Object.keys(profile.knowledge).length;
         
         if (avgKnowledge > 0.8 && profile.performance.accuracy > 0.85) {
-            profile.level = 3; // متقدم
+            profile.level = 3;
         } else if (avgKnowledge > 0.5 && profile.performance.accuracy > 0.7) {
-            profile.level = 2; // متوسط
+            profile.level = 2;
         } else {
-            profile.level = 1; // مبتدئ
+            profile.level = 1;
         }
     },
     
@@ -129,10 +127,10 @@ const AdaptiveLearning = {
             .sort((a, b) => a[1] - b[1])[0][0];
         
         const recommendations = {
-            basics: { exercise: 'تمرين-المجسمات-ثلاثية-الأبعاد', difficulty: 'easy', focus: 'الأساسيات' },
-            fractions: { exercise: 'حساب-النسبة-المئوية', difficulty: 'medium', focus: 'الكسور' },
-            percentages: { exercise: 'تحدي-الأشكال', difficulty: 'hard', focus: 'النسب المئوية' },
-            wordProblems: { exercise: 'real-world', difficulty: 'medium', focus: 'مسائل واقعية' }
+            basics: { exercise: 'تمرين-المجسمات-ثلاثية-الأبعاد', difficulty: 'easy', focus: 'basics' },
+            fractions: { exercise: 'حساب-النسبة-المئوية', difficulty: 'medium', focus: 'fractions' },
+            percentages: { exercise: 'تحدي-الأشكال', difficulty: 'hard', focus: 'percentages' },
+            wordProblems: { exercise: 'real-world', difficulty: 'medium', focus: 'word problems' }
         };
         
         let recommendation = recommendations[weakestArea];
@@ -151,7 +149,7 @@ const AdaptiveLearning = {
         
         return {
             ...recommendation,
-            reason: `تحسين مهارة ${recommendation.focus}`,
+            reason: `Improve ${recommendation.focus}`,
             confidence: (1 - profile.knowledge[weakestArea]).toFixed(2),
             estimatedTime: this.estimateTime(profile)
         };
@@ -170,7 +168,6 @@ const AdaptiveLearning = {
         const baseTime = 300;
         const speedFactor = profile.performance.speed === 'fast' ? 0.7 : 
                           profile.performance.speed === 'slow' ? 1.3 : 1;
-        
         return Math.round(baseTime * speedFactor);
     },
     
@@ -204,9 +201,9 @@ const AdaptiveLearning = {
         const weaknesses = this.findWeaknesses(profile);
         return weaknesses.map(weakness => ({
             area: weakness,
-            action: `تدريب إضافي على ${weakness}`,
+            action: `Additional practice on ${weakness}`,
             resources: this.getResourcesForArea(weakness),
-            target: `رفع المهارة إلى 70%`
+            target: `Raise skill to 70%`
         }));
     },
     
@@ -234,15 +231,15 @@ const AdaptiveLearning = {
         const steps = [];
         
         if (profile.performance.accuracy < 0.7) {
-            steps.push('مراجعة الأساسيات قبل التقدم');
+            steps.push('Review basics before advancing');
         }
         
         if (profile.performance.speed === 'slow') {
-            steps.push('تمارين التركيز على السرعة');
+            steps.push('Speed-focused exercises');
         }
         
         if (profile.level === 1 && Object.values(profile.knowledge).some(k => k > 0.6)) {
-            steps.push('جاهز للانتقال للمستوى المتوسط');
+            steps.push('Ready to move to intermediate level');
         }
         
         return steps;
