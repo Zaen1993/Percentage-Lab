@@ -13,11 +13,13 @@ const translations = {
     }
 };
 
+let currentLanguage = 'ar';
+
 const setLanguage = (lang = 'ar') => {
-    localStorage.setItem('appLanguage', lang);
+    currentLanguage = lang;
     document.documentElement.lang = lang;
     document.documentElement.dir = lang === 'ar' ? 'rtl' : 'ltr';
-    
+
     const elements = document.querySelectorAll('[data-translate]');
     elements.forEach(el => {
         const key = el.getAttribute('data-translate');
@@ -27,8 +29,6 @@ const setLanguage = (lang = 'ar') => {
     });
 };
 
-const getCurrentLanguage = () => {
-    return localStorage.getItem('appLanguage') || 'ar';
-};
+const getCurrentLanguage = () => currentLanguage;
 
 export { translations, setLanguage, getCurrentLanguage };
