@@ -13,9 +13,16 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      # هذه الخطوة للتأكد من وجود config.xml في المستودع
-      - name: List root files
-        run: ls -la
+      - name: Verify config.xml exists
+        run: |
+          if [ -f "config.xml" ]; then
+            echo "✅ config.xml found"
+            echo "First 10 lines:"
+            head -10 config.xml
+          else
+            echo "❌ config.xml NOT FOUND"
+            exit 1
+          fi
 
       - name: Set up Java
         uses: actions/setup-java@v4
