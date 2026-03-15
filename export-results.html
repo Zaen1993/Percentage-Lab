@@ -2,62 +2,67 @@
 <html lang="ar" dir="rtl">
 <head>
     <meta charset="UTF-8">
-    <title>تصدير النتائج</title>
-    <script src="save-results.js"></script>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>مختبر النسبة المئوية</title>
     <style>
-        body { font-family: Arial; padding: 20px; background: #f5f5f5; }
-        .result { border: 1px solid #ccc; padding: 10px; margin: 5px; background: white; border-radius: 5px; }
-        button { padding: 10px 20px; margin: 5px; cursor: pointer; border: none; border-radius: 5px; }
-        button:hover { opacity: 0.8; }
+        body {
+            font-family: Arial, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e, #16213e);
+            color: white;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            padding: 20px;
+            text-align: center;
+        }
+        .container {
+            background: rgba(0, 0, 0, 0.7);
+            padding: 30px;
+            border-radius: 15px;
+            border: 2px solid #00ffcc;
+            max-width: 500px;
+        }
+        h1 {
+            color: #00ffcc;
+            margin-bottom: 20px;
+        }
+        p {
+            font-size: 18px;
+            margin-bottom: 30px;
+            line-height: 1.6;
+        }
+        button {
+            background: #00ffcc;
+            color: #000;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 25px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s;
+            border: 2px solid white;
+        }
+        button:hover {
+            background: #00ccaa;
+            transform: scale(1.05);
+        }
     </style>
 </head>
 <body>
-    <h1>نتائج التمارين</h1>
-    <button onclick="exportData()" style="background: #4CAF50; color: white;">📥 تصدير JSON</button>
-    <button onclick="clearData()" style="background: #f44336; color: white;">🗑️ مسح النتائج</button>
-    <button onclick="goHome()" style="background: #2196F3; color: white;">🏠 الرئيسية</button>
-    <div id="results"></div>
-    
+    <div class="container">
+        <h1>مختبر النسبة المئوية</h1>
+        <p>هذا التطبيق لا يخزن أي نتائج أو بيانات على جهازك. كل التفاعلات تحدث بشكل مؤقت ولا يتم حفظ أي شيء.</p>
+        <p>يمكنك استخدام التطبيق بحرية تامة دون قلق بشأن الخصوصية.</p>
+        <button onclick="goHome()">العودة إلى الرئيسية</button>
+    </div>
+
     <script>
-        function loadResults() {
-            const results = getLocalResults();
-            const container = document.getElementById('results');
-            container.innerHTML = '';
-            
-            if (results.length === 0) {
-                container.innerHTML = '<p>لا توجد نتائج بعد</p>';
-                return;
-            }
-            
-            results.forEach(r => {
-                const div = document.createElement('div');
-                div.className = 'result';
-                div.innerHTML = `
-                    <strong>${r.exercise}</strong><br>
-                    النتيجة: ${r.score}%<br>
-                    الوقت: ${r.time} ثانية<br>
-                    التاريخ: ${new Date(r.date).toLocaleString('ar-EG')}
-                `;
-                container.appendChild(div);
-            });
-        }
-        
-        function exportData() {
-            exportResults();
-        }
-        
-        function clearData() {
-            if (confirm('هل تريد مسح جميع النتائج؟')) {
-                clearLocalResults();
-                loadResults();
-            }
-        }
-        
         function goHome() {
             window.location.href = 'الرئيسية.html';
         }
-        
-        loadResults();
     </script>
 </body>
 </html>
