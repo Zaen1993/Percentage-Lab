@@ -22,7 +22,7 @@
     "files": ["**/*"],
     "win": {
       "target": ["portable", "nsis"],
-      "icon": "desktop-icon.ico"
+      "icon": "resources/desktop-icon.ico"
     },
     "nsis": {
       "oneClick": true,
