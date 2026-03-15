@@ -1,13 +1,7 @@
 <?xml version='1.0' encoding='utf-8'?>
-<widget id="com.percentagelab.app" 
-        version="1.0.0" 
-        xmlns="http://www.w3.org/ns/widgets" 
-        xmlns:cdv="http://cordova.apache.org/ns/1.0"
-        android-package="com.percentagelab.app"
-        ios-CFBundleIdentifier="com.percentagelab.app">
+<widget id="com.percentagelab.app" version="1.0.0" xmlns="http://www.w3.org/ns/widgets" xmlns:cdv="http://cordova.apache.org/ns/1.0">
     
     <name>مختبر النسبة المئوية</name>
-    <name short="مختبر النسبة">مختبر النسبة المئوية</name>
     <description>تطبيق تعليمي تفاعلي للنسب المئوية</description>
     <author email="zaen1993@github.com" href="https://github.com/Zaen1993">
         Zaen ALabden Moustafa
@@ -27,22 +21,22 @@
     <preference name="AndroidWindowSplashScreenAnimatedIcon" value="resources/icon-512.png" />
     <preference name="AndroidWindowSplashScreenBackground" value="#FFFFFF" />
     
-    <!-- فقط الكاميرا (للتحكم باليد) -->
+    <!-- الكاميرا فقط -->
     <feature name="Camera">
         <param name="android-package" value="org.apache.cordova.camera.CameraLauncher" />
     </feature>
     
-    <!-- الأذونات الأساسية -->
+    <!-- الأذونات -->
     <uses-permission android:name="android.permission.CAMERA" />
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     
-    <!-- أذونات iOS للكاميرا فقط -->
+    <!-- iOS -->
     <edit-config target="NSCameraUsageDescription" file="*-Info.plist">
         <string>التطبيق يحتاج الكاميرا للتحكم بحركة المؤشر باستخدام اليد</string>
     </edit-config>
     
-    <!-- الأيقونات - Android -->
+    <!-- أيقونات Android -->
     <platform name="android">
         <icon density="ldpi" src="resources/android/mipmap-ldpi/ic_launcher.png" />
         <icon density="mdpi" src="resources/android/mipmap-mdpi/ic_launcher.png" />
@@ -52,7 +46,7 @@
         <icon density="xxxhdpi" src="resources/android/mipmap-xxxhdpi/ic_launcher.png" />
     </platform>
     
-    <!-- الأيقونات - iOS -->
+    <!-- أيقونات iOS -->
     <platform name="ios">
         <icon src="resources/ios/AppIcon.appiconset/Icon-App-20x20@1x.png" width="20" height="20" />
         <icon src="resources/ios/AppIcon.appiconset/Icon-App-20x20@2x.png" width="40" height="40" />
