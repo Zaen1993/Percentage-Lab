@@ -30,7 +30,6 @@ function createWindow() {
     });
 }
 
-// فقط الخيارات الضرورية للكاميرا
 app.commandLine.appendSwitch('enable-media-stream');
 app.commandLine.appendSwitch('enable-webrtc');
 
