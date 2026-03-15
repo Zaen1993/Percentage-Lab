@@ -13,6 +13,10 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      # هذه الخطوة للتأكد من وجود config.xml في المستودع
+      - name: List root files
+        run: ls -la
+
       - name: Set up Java
         uses: actions/setup-java@v4
         with:
