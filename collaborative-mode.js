@@ -1,18 +1,17 @@
-// collaborative-mode.js
 const CollaborativeMode = {
     peer: null,
     connections: [],
     roomId: null,
     userName: 'مستخدم',
-    
+
     init() {
         if (typeof Peer === 'undefined') {
             console.error('❌ مكتبة PeerJS غير محملة');
             return false;
         }
-        
+
         this.userName = localStorage.getItem('collab_user') || `طالب_${Math.floor(Math.random() * 1000)}`;
-        
+
         this.peer = new Peer(null, {
             debug: 2,
             config: {
@@ -22,30 +21,30 @@ const CollaborativeMode = {
                 ]
             }
         });
-        
+
         this.setupPeerEvents();
         this.setupUI();
-        
+
         return true;
     },
-    
+
     setupPeerEvents() {
         this.peer.on('open', (id) => {
             console.log('✅ اتصال Peer جاهز، المعرف:', id);
             this.showStatus('✅ متصل');
         });
-        
+
         this.peer.on('connection', (conn) => {
             console.log('🔗 اتصال جديد من:', conn.peer);
             this.handleNewConnection(conn);
         });
-        
+
         this.peer.on('error', (err) => {
             console.error('❌ خطأ في Peer:', err);
             this.showStatus('❌ خطأ في الاتصال');
         });
     },
-    
+
     setupUI() {
         const collabUI = document.createElement('div');
         collabUI.id = 'collaborative-ui';
@@ -61,7 +60,7 @@ const CollaborativeMode = {
             z-index: 9999;
             min-width: 300px;
         `;
-        
+
         collabUI.innerHTML = `
             <h3 style="margin-bottom: 10px; color: #00ffcc;">👥 الوضع التعاوني</h3>
             <div style="margin-bottom: 10px;">
@@ -93,54 +92,54 @@ const CollaborativeMode = {
                 ✕
             </button>
         `;
-        
+
         document.body.appendChild(collabUI);
-        
+
         document.getElementById('collab-name').addEventListener('change', (e) => {
             this.userName = e.target.value;
             localStorage.setItem('collab_user', this.userName);
         });
-        
+
         document.getElementById('create-room').addEventListener('click', () => this.createRoom());
         document.getElementById('join-room').addEventListener('click', () => this.showRoomInput());
         document.getElementById('connect-room').addEventListener('click', () => this.joinRoom());
         document.getElementById('close-collab').addEventListener('click', () => this.closeUI());
     },
-    
+
     createRoom() {
         if (!this.peer || !this.peer.id) {
             alert('⏳ جاري تهيئة الاتصال...');
             return;
         }
-        
+
         this.roomId = this.peer.id;
         this.showStatus(`✅ تم إنشاء الغرفة: ${this.roomId}`);
         this.updateRoomInfo();
-        
+
         document.getElementById('room-input').value = this.roomId;
         document.getElementById('room-section').style.display = 'block';
-        
+
         this.broadcast({ type: 'room_created', roomId: this.roomId, creator: this.userName });
     },
-    
+
     showRoomInput() {
         document.getElementById('room-section').style.display = 'block';
     },
-    
+
     joinRoom() {
         const roomId = document.getElementById('room-input').value.trim();
         if (!roomId) {
             alert('⚠️ الرجاء إدخال رقم الغرفة');
             return;
         }
-        
+
         if (roomId === this.peer.id) {
             alert('⚠️ لا يمكنك الانضمام لغرفتك الخاصة');
             return;
         }
-        
+
         this.roomId = roomId;
-        
+
         const conn = this.peer.connect(roomId, {
             reliable: true,
             metadata: {
@@ -148,33 +147,33 @@ const CollaborativeMode = {
                 timestamp: Date.now()
             }
         });
-        
+
         conn.on('open', () => {
             console.log('✅ متصل بالغرفة:', roomId);
             this.connections.push(conn);
             this.handleConnection(conn);
             this.showStatus(`✅ متصل بالغرفة ${roomId}`);
-            
+
             conn.send({
                 type: 'join',
                 userName: this.userName,
                 peerId: this.peer.id
             });
         });
-        
+
         conn.on('error', (err) => {
             console.error('❌ خطأ في الاتصال:', err);
             this.showStatus('❌ فشل الاتصال بالغرفة');
         });
     },
-    
+
     handleNewConnection(conn) {
         this.connections.push(conn);
         this.handleConnection(conn);
-        
+
         conn.on('open', () => {
             console.log('✅ اتصال مفتوح مع:', conn.peer);
-            
+
             conn.send({
                 type: 'welcome',
                 message: `مرحباً بك في الغرفة ${this.roomId}`,
@@ -183,24 +182,24 @@ const CollaborativeMode = {
             });
         });
     },
-    
+
     handleConnection(conn) {
         conn.on('data', (data) => {
             console.log('📩 بيانات واردة:', data);
             this.handleIncomingData(data, conn);
         });
-        
+
         conn.on('close', () => {
             console.log('🔒 اتصال مغلق:', conn.peer);
             this.removeConnection(conn.peer);
         });
-        
+
         conn.on('error', (err) => {
             console.error('❌ خطأ في الاتصال:', err);
             this.removeConnection(conn.peer);
         });
     },
-    
+
     handleIncomingData(data, conn) {
         switch(data.type) {
             case 'join':
@@ -211,30 +210,30 @@ const CollaborativeMode = {
                     timestamp: Date.now()
                 });
                 break;
-                
+
             case 'progress':
                 this.showProgress(data.userName, data.progress);
                 break;
-                
+
             case 'answer':
                 this.showAnswer(data.userName, data.answer, data.correct);
                 break;
-                
+
             case 'message':
                 this.showMessage(data.userName, data.message);
                 break;
-                
+
             case 'welcome':
                 this.showStatus(data.message);
                 this.updateParticipants(data.participants);
                 break;
-                
+
             case 'room_created':
                 this.showStatus(`✅ انضممت لغرفة ${data.roomId} بقيادة ${data.creator}`);
                 break;
         }
     },
-    
+
     broadcast(data) {
         this.connections.forEach(conn => {
             if (conn.open) {
@@ -246,7 +245,7 @@ const CollaborativeMode = {
             }
         });
     },
-    
+
     shareProgress(progress) {
         this.broadcast({
             type: 'progress',
@@ -254,7 +253,7 @@ const CollaborativeMode = {
             exercise: window.location.pathname.split('/').pop()
         });
     },
-    
+
     shareAnswer(question, answer, correct) {
         this.broadcast({
             type: 'answer',
@@ -263,18 +262,18 @@ const CollaborativeMode = {
             correct: correct
         });
     },
-    
+
     sendMessage(message) {
         this.broadcast({
             type: 'message',
             message: message
         });
     },
-    
+
     addParticipant(userName, peerId) {
         const participantsDiv = document.getElementById('participants');
         const participantId = `participant-${peerId}`;
-        
+
         let participantDiv = document.getElementById(participantId);
         if (!participantDiv) {
             participantDiv = document.createElement('div');
@@ -291,38 +290,38 @@ const CollaborativeMode = {
             `;
             participantsDiv.appendChild(participantDiv);
         }
-        
+
         participantDiv.innerHTML = `
             <span>👤 ${userName}</span>
             <span style="font-size: 0.8em; color: #00ffcc;">${peerId.substring(0, 6)}</span>
         `;
     },
-    
+
     removeConnection(peerId) {
         this.connections = this.connections.filter(conn => conn.peer !== peerId);
-        
+
         const participantDiv = document.getElementById(`participant-${peerId}`);
         if (participantDiv) {
             participantDiv.remove();
         }
     },
-    
+
     updateParticipants(participants) {
         const participantsDiv = document.getElementById('participants');
         participantsDiv.innerHTML = '';
-        
+
         participants.forEach(p => {
             this.addParticipant(p.userName, p.peerId);
         });
     },
-    
+
     getParticipants() {
         return this.connections.map(conn => ({
             userName: conn.metadata?.userName || 'مجهول',
             peerId: conn.peer
         }));
     },
-    
+
     showProgress(userName, progress) {
         const notification = document.createElement('div');
         notification.style.cssText = `
@@ -338,11 +337,11 @@ const CollaborativeMode = {
         `;
         notification.innerHTML = `👤 ${userName}: ${progress}%`;
         document.body.appendChild(notification);
-        
+
         setTimeout(() => {
             notification.remove();
         }, 3000);
-        
+
         const style = document.createElement('style');
         style.textContent = `
             @keyframes slideIn {
@@ -352,15 +351,15 @@ const CollaborativeMode = {
         `;
         document.head.appendChild(style);
     },
-    
+
     showMessage(userName, message) {
         console.log(`💬 ${userName}: ${message}`);
     },
-    
+
     showAnswer(userName, answer, correct) {
         console.log(`✅ ${userName}: ${answer} (${correct ? 'صحيح' : 'خطأ'})`);
     },
-    
+
     showStatus(message) {
         const statusDiv = document.getElementById('status');
         if (statusDiv) {
@@ -370,7 +369,7 @@ const CollaborativeMode = {
                                   message.includes('⚠️') ? '#f39c12' : 'white';
         }
     },
-    
+
     updateRoomInfo() {
         const roomInfo = document.getElementById('room-info');
         if (roomInfo) {
@@ -381,13 +380,13 @@ const CollaborativeMode = {
             `;
         }
     },
-    
+
     closeUI() {
         const ui = document.getElementById('collaborative-ui');
         if (ui) {
             ui.remove();
         }
-        
+
         this.connections.forEach(conn => conn.close());
         if (this.peer) {
             this.peer.destroy();
