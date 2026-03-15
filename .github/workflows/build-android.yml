@@ -1,0 +1,49 @@
+name: Build Signed Android APK
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '11'
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      - name: Install Cordova
+        run: npm install -g cordova
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Add Android platform
+        run: cordova platform add android --no-telemetry
+
+      - name: Decode Keystore
+        run: echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 --decode > percentage-lab.keystore
+
+      - name: Build Release APK
+        run: cordova build android --release -- --keystore=percentage-lab.keystore --storePassword=${{ secrets.KEYSTORE_PASSWORD }} --alias=${{ secrets.KEY_ALIAS }} --password=${{ secrets.KEY_PASSWORD }}
+
+      - name: Rename APK
+        run: mv platforms/android/app/build/outputs/apk/release/app-release.apk Percentage-Lab-signed.apk
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: signed-android-apk
+          path: Percentage-Lab-signed.apk
