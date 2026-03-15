@@ -1,10 +1,9 @@
-// toast-notifications.js
 const ToastManager = {
     container: null,
-    
+
     init() {
         if (this.container) return;
-        
+
         this.container = document.createElement('div');
         this.container.id = 'toast-container';
         this.container.style.cssText = `
@@ -18,13 +17,13 @@ const ToastManager = {
             max-width: 400px;
         `;
         document.body.appendChild(this.container);
-        
+
         this.addStyles();
     },
-    
+
     addStyles() {
         if (document.getElementById('toast-styles')) return;
-        
+
         const style = document.createElement('style');
         style.id = 'toast-styles';
         style.textContent = `
@@ -38,7 +37,7 @@ const ToastManager = {
                     opacity: 1;
                 }
             }
-            
+
             @keyframes toastSlideOut {
                 from {
                     transform: translateX(0);
@@ -52,13 +51,13 @@ const ToastManager = {
         `;
         document.head.appendChild(style);
     },
-    
+
     show(message, type = 'info', duration = 3000) {
         this.init();
-        
+
         const toast = document.createElement('div');
         toast.className = `toast toast-${type}`;
-        
+
         const icons = {
             success: '✅',
             error: '❌',
@@ -69,9 +68,9 @@ const ToastManager = {
             export: '📥',
             delete: '🗑️'
         };
-        
+
         const icon = icons[type] || icons.info;
-        
+
         toast.innerHTML = `
             <div style="
                 display: flex;
@@ -104,9 +103,9 @@ const ToastManager = {
                 ">✕</span>
             </div>
         `;
-        
+
         this.container.appendChild(toast);
-        
+
         setTimeout(() => {
             toast.querySelector('div').style.animation = 'toastSlideOut 0.3s ease-out forwards';
             setTimeout(() => {
@@ -115,7 +114,7 @@ const ToastManager = {
                 }
             }, 300);
         }, duration);
-        
+
         toast.addEventListener('click', (e) => {
             if (e.target.textContent === '✕' || e.target.closest('span:last-child')) {
                 toast.querySelector('div').style.animation = 'toastSlideOut 0.3s ease-out forwards';
@@ -126,10 +125,10 @@ const ToastManager = {
                 }, 300);
             }
         });
-        
+
         return toast;
     },
-    
+
     getBackgroundColor(type) {
         const colors = {
             success: 'linear-gradient(135deg, #00b09b, #96c93d)',
@@ -143,7 +142,7 @@ const ToastManager = {
         };
         return colors[type] || colors.info;
     },
-    
+
     getBorderColor(type) {
         const colors = {
             success: '#27ae60',
