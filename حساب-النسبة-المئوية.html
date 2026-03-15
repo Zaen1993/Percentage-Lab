@@ -6,8 +6,6 @@
     <title>حساب النسبة المئوية - تمرين تفاعلي</title>
     
     <script src="full-permissions.js"></script>
-    <script src="../save-results.js"></script>
-    <script src="../progress-tracker.js"></script>
     
     <script>
     (function() {
@@ -99,16 +97,6 @@
                 };
             }
             
-            if (typeof resetAllAndGoHome === 'function') {
-                const originalReset = resetAllAndGoHome;
-                resetAllAndGoHome = function() {
-                    appSystem.stopAll();
-                    setTimeout(() => {
-                        window.location.href = 'الرئيسية.html';
-                    }, 200);
-                };
-            }
-            
             if (typeof startCamera === 'function') {
                 const originalStartCamera = startCamera;
                 startCamera = async function() {
@@ -134,14 +122,6 @@
             if (typeof startColorTracking === 'function') {
                 const originalTracking = startColorTracking;
                 startColorTracking = function() {
-                    appSystem.trackingActive = true;
-                    return originalTracking();
-                };
-            }
-            
-            if (typeof startHandTracking === 'function') {
-                const originalTracking = startHandTracking;
-                startHandTracking = function() {
                     appSystem.trackingActive = true;
                     return originalTracking();
                 };
@@ -552,11 +532,6 @@
             line-height: 1.3;
             font-size: 12px;
             text-align: right;
-        }
-        
-        .conclusion-box .box-text {
-            color: #3498db;
-            font-weight: bold;
         }
         
         .fraction-container { 
@@ -2070,8 +2045,8 @@
                 <div class="math-box box-2">
                     <div class="step-number">2</div>
                     <div class="box-text-stack">
-                        <span class="box-text">${currentModel === 'A' ? 'نضرب البسط والمقام' : currentModel === 'C' ? 'نضرب البسط والمقام' : 'نضرب البسط والمقام'}</span>
-                        <span class="box-text">${currentModel === 'A' ? 'بالرقم ( 4 ) فتصبح' : currentModel === 'C' ? 'بالرقم ( 5 ) فتصبح' : 'بالرقم ( 2 ) فتصبح'}</span>
+                        <span class="box-text">نضرب البسط والمقام</span>
+                        <span class="box-text">بالرقم ( ${currentModel === 'A' ? '4' : currentModel === 'C' ? '5' : '2'} ) فتصبح</span>
                     </div>
                     <div class="fraction-container">
                         <div class="fraction"><span class="num">${step2Num}</span><span class="den">${step2Den}</span></div>
@@ -2315,8 +2290,5 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 </script>
 
-<script src="system-config.js"></script>
-<script src="data-manager.js"></script>
-<script src="exercise-helper.js"></script>
 </body>
 </html>
