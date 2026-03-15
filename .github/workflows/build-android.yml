@@ -13,15 +13,6 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Verify config.xml exists
-        run: |
-          if [ -f "config.xml" ]; then
-            echo "✅ config.xml found"
-          else
-            echo "❌ config.xml NOT FOUND"
-            exit 1
-          fi
-
       - name: Set up Java
         uses: actions/setup-java@v4
         with:
@@ -36,22 +27,21 @@ jobs:
       - name: Install Cordova
         run: npm install -g cordova
 
-      # إنشاء مشروع Cordova جديد في مجلد cordova-project
       - name: Create new Cordova project
         run: |
           cordova create cordova-project com.percentagelab.app "مختبر النسبة المئوية"
-          # نسخ ملفات المشروع الأصلي إلى مجلد www
           cp -r * cordova-project/www/ 2>/dev/null || true
-          # استبدال ملف config.xml الأصلي (اختياري: نحن نستخدم config.xml الجديد، لكن يمكنك نسخ القديم إذا أردت)
-          # cp config.xml cordova-project/config.xml
+          # نسخ config.xml إذا أردت (اختياري)
+          cp config.xml cordova-project/config.xml
 
       - name: Add Android platform
         run: |
           cd cordova-project
           cordova platform add android --no-telemetry
 
-      - name: Decode Keystore
-        run: echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 --decode > cordova-project/percentage-lab.keystore
+      - name: Decode Keystore (cleaned)
+        run: |
+          echo "${{ secrets.KEYSTORE_BASE64 }}" | tr -d '\n\r ' | base64 --decode > cordova-project/percentage-lab.keystore
 
       - name: Build Release APK
         run: |
