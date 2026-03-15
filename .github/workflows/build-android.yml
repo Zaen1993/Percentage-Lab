@@ -17,8 +17,6 @@ jobs:
         run: |
           if [ -f "config.xml" ]; then
             echo "✅ config.xml found"
-            echo "First 10 lines:"
-            head -10 config.xml
           else
             echo "❌ config.xml NOT FOUND"
             exit 1
@@ -38,20 +36,30 @@ jobs:
       - name: Install Cordova
         run: npm install -g cordova
 
-      - name: Install dependencies
-        run: npm install
+      # إنشاء مشروع Cordova جديد في مجلد cordova-project
+      - name: Create new Cordova project
+        run: |
+          cordova create cordova-project com.percentagelab.app "مختبر النسبة المئوية"
+          # نسخ ملفات المشروع الأصلي إلى مجلد www
+          cp -r * cordova-project/www/ 2>/dev/null || true
+          # استبدال ملف config.xml الأصلي (اختياري: نحن نستخدم config.xml الجديد، لكن يمكنك نسخ القديم إذا أردت)
+          # cp config.xml cordova-project/config.xml
 
       - name: Add Android platform
-        run: cordova platform add android --no-telemetry
+        run: |
+          cd cordova-project
+          cordova platform add android --no-telemetry
 
       - name: Decode Keystore
-        run: echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 --decode > percentage-lab.keystore
+        run: echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 --decode > cordova-project/percentage-lab.keystore
 
       - name: Build Release APK
-        run: cordova build android --release -- --keystore=percentage-lab.keystore --storePassword=${{ secrets.KEYSTORE_PASSWORD }} --alias=${{ secrets.KEY_ALIAS }} --password=${{ secrets.KEY_PASSWORD }}
+        run: |
+          cd cordova-project
+          cordova build android --release -- --keystore=percentage-lab.keystore --storePassword=${{ secrets.KEYSTORE_PASSWORD }} --alias=${{ secrets.KEY_ALIAS }} --password=${{ secrets.KEY_PASSWORD }}
 
       - name: Rename APK
-        run: mv platforms/android/app/build/outputs/apk/release/app-release.apk Percentage-Lab-signed.apk
+        run: mv cordova-project/platforms/android/app/build/outputs/apk/release/app-release.apk Percentage-Lab-signed.apk
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
