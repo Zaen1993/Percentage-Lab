@@ -3,854 +3,2041 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>تمرين المجسمات ثلاثية الأبعاد - النسبة المئوية</title>
-    <script>
-    (function() {
-        'use strict';
-        window.appSystem = {
-            isRunning: true,
-            cameraStream: null,
-            trackingActive: false,
-            intervals: [],
-            timeouts: [],
-            audioContext: null,
-            stopAll: function() {
-                if (this.cameraStream) this.cameraStream.getTracks().forEach(track => track.stop());
-                this.intervals.forEach(clearInterval);
-                this.timeouts.forEach(clearTimeout);
-                this.intervals = [];
-                this.timeouts = [];
-                this.trackingActive = false;
-                if (this.audioContext && this.audioContext.state !== 'closed') this.audioContext.close();
-                this.isRunning = false;
-            },
-            goToMainMenu: function() {
-                this.stopAll();
-                setTimeout(() => window.location.href = 'الرئيسية.html', 200);
-            },
-            registerInterval: function(id) { this.intervals.push(id); return id; },
-            registerTimeout: function(id) { this.timeouts.push(id); return id; }
-        };
-        const originalSetInterval = window.setInterval;
-        window.setInterval = function(...args) { return appSystem.registerInterval(originalSetInterval(...args)); };
-        const originalSetTimeout = window.setTimeout;
-        window.setTimeout = function(...args) { return appSystem.registerTimeout(originalSetTimeout(...args)); };
-        document.addEventListener('DOMContentLoaded', function() {
-            document.getElementById('main-menu-btn')?.addEventListener('click', function(e) {
-                e.preventDefault(); appSystem.goToMainMenu(); return false;
-            });
-        });
-        window.addEventListener('beforeunload', function() { if (appSystem.isRunning) appSystem.stopAll(); });
-        window.goToMainMenu = function() { appSystem.goToMainMenu(); };
-    })();
-    </script>
+    <title>تحدي الأشكال - النسبة المئوية</title>
+    
+    <script src="full-permissions.js"></script>
+    
     <style>
-        :root {
-            --main: #00f2ff; --orange: #ff9800; --purple: #9370DB; --gold: #FFD700;
-            --bg-dark: #1a1a2e; --shape-a-color: #FFFF00; --shape-b-color: #0077FF;
-            --shape-c-color: #00FF00; --correct-color: #2ecc71; --wrong-color: #e74c3c;
-            --button-start: #27ae60; --button-reset: #c0392b; --quiz-bg: rgba(40,45,65,0.95);
-            --panel-color: #FFFF00;
+        /* نفس الأنماط السابقة مع إضافة المؤثرات */
+        :root { 
+            --main: #00ffcc; 
+            --gold: #FFD700; 
+            --orange: #ff9800; 
+            --green: #2ecc71;
+            --primary: #2c3e50; 
+            --accent: #e74c3c; 
+            --bg: #f4f7f6;
+            --cube-height: 40px;
+            --header-increase: calc(1 * var(--cube-height));
+            --cursor-red: #ff4444;
         }
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        body {
-            font-family: 'Cairo', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: var(--bg-dark); color: white; overflow: hidden; height: 100vh;
-            touch-action: none; user-select: none;
+        body { 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            overflow: hidden; 
+            height: 100vh; 
+            user-select: none; 
+            touch-action: none;
+            display: flex;
+            justify-content: center;
+            align-items: center;
         }
+
+        #app-container { 
+            display: flex; 
+            flex-direction: column; 
+            height: 100vh; 
+            width: 100%;
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
         #main-menu-btn {
-            position: fixed; top: 8px; right: 12px; z-index: 10000;
-            padding: 8px 18px; background: linear-gradient(135deg, var(--gold) 0%, #ffcc00 100%);
-            color: #000; border: 2px solid #fff; border-radius: 25px; font-weight: 900;
-            font-size: 15px; cursor: pointer; box-shadow: 0 6px 20px rgba(255,215,0,0.7);
-            transition: all 0.3s ease; min-width: 115px; text-align: center; height: 42px;
-            display: flex; align-items: center; justify-content: center;
+            position: fixed;
+            top: 10px;
+            right: 10px;
+            z-index: 10000;
+            padding: 8px 16px;
+            background: rgba(255, 215, 0, 0.95);
+            color: #000;
+            border: 2px solid #fff;
+            border-radius: 20px;
+            font-weight: bold;
+            font-size: 14px;
+            cursor: pointer;
+            box-shadow: 0 5px 15px rgba(255, 215, 0, 0.6);
+            transition: all 0.3s ease;
+            min-width: 100px;
+            text-align: center;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
+        
         #main-menu-btn:hover {
-            background: linear-gradient(135deg, #ffeb3b 0%, #ffcc00 100%);
-            transform: scale(1.08); box-shadow: 0 10px 25px rgba(255,215,0,0.9);
+            background: rgba(255, 235, 59, 0.95);
+            transform: scale(1.05);
+            box-shadow: 0 8px 20px rgba(255, 215, 0, 0.8);
         }
+
         #control-bar {
-            background: rgba(0,0,0,0.95); padding: 8px 15px; display: flex; justify-content: center;
-            align-items: center; gap: 12px; border-bottom: 3px solid var(--main);
-            flex-wrap: nowrap; overflow-x: auto; white-space: nowrap; position: fixed;
-            top: 0; left: 0; right: 0; z-index: 1000; padding-right: 140px; height: 60px;
-            scrollbar-width: none;
+            background: rgba(0,0,0,0.9);
+            padding: 10px; 
+            display: flex; 
+            justify-content: center; 
+            align-items: center;
+            gap: 10px; 
+            z-index: 1000; 
+            border-bottom: 3px solid var(--main);
+            flex-wrap: wrap;
+            padding-right: 120px;
         }
-        #control-bar::-webkit-scrollbar { display: none; }
-        .control-section { display: flex; gap: 8px; align-items: center; flex-shrink: 0; }
-        .shape-label { color: var(--orange); font-weight: 900; font-size: 16px; margin-right: 5px; }
-        .control-mode-label { color: var(--main) !important; font-weight: 900; font-size: 16px; margin-right: 5px; }
+        
+        .control-section { 
+            display: flex; 
+            gap: 8px; 
+            align-items: center;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+        
+        .shape-label {
+            color: var(--orange);
+            font-weight: bold;
+            font-size: 16px;
+            margin: 0 5px;
+        }
+        
+        .control-mode-label {
+            color: var(--main);
+            font-weight: bold;
+            font-size: 16px;
+            margin: 0 5px;
+            transition: color 0.3s;
+        }
+        
         .mode-btn, .model-btn {
-            padding: 8px 16px; border-radius: 25px; border: 2px solid #666; background: #333;
-            color: white; font-weight: 800; cursor: pointer; transition: all 0.3s ease;
-            font-size: 15px; min-width: 75px; text-align: center; height: 42px;
-            display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+            padding: 8px 16px; 
+            border-radius: 20px; 
+            border: 2px solid #555; 
+            background: #333;
+            color: white; 
+            font-weight: bold; 
+            cursor: pointer; 
+            transition: 0.3s;
+            font-size: 14px;
+            min-width: 70px;
+            text-align: center;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
-        .mode-btn.active { border-color: var(--orange) !important; background: rgba(255,152,0,0.25); box-shadow: 0 0 15px var(--orange); }
-        .model-btn.active { border-color: var(--main) !important; background: rgba(0,242,255,0.25); box-shadow: 0 0 15px var(--main); }
-        .model-btn.active[data-shape="A"] { text-shadow: 0 0 10px #FFFF00, 0 0 20px #FFFF00; }
-        .model-btn.active[data-shape="B"] { text-shadow: 0 0 10px #0077FF, 0 0 20px #0077FF; }
-        .model-btn.active[data-shape="C"] { text-shadow: 0 0 10px #00FF00, 0 0 20px #00FF00; }
-        #horizontal-section {
-            position: fixed; top: 60px; left: 0; right: 0; height: 300px;
-            background: rgba(15,20,40,0.95); z-index: 900; border-bottom: 3px solid var(--main);
-            display: flex; padding: 10px; gap: 10px; align-items: stretch; overflow: hidden;
+        .mode-btn:hover, .model-btn:hover { background: #444; }
+        .mode-btn.active { 
+            border-color: var(--main); 
+            background: #004d40; 
+            box-shadow: 0 0 10px var(--main); 
+        }
+        .model-btn.active { 
+            border-color: var(--orange); 
+            background: rgba(255, 152, 0, 0.3); 
+            box-shadow: 0 0 10px var(--orange); 
+        }
+        .mode-btn.camera-btn { border-color: #ff6b6b; }
+        .mode-btn.camera-btn.active { 
+            background: #8b0000; 
+            border-color: #ff0; 
+            box-shadow: 0 0 10px #ff0;
+        }
+        
+        .separator {
+            font-size: 20px;
+            margin: 0 8px;
+        }
+
+        #header-section {
+            display: flex; 
+            height: calc(160px + (2.5 * var(--cube-height)));
+            background: #16213e; 
+            padding: 8px; 
+            gap: 10px; 
+            z-index: 100;
+            min-height: 240px;
+        }
+
+        #camera-wrapper {
+            width: 160px; 
+            height: 100%; 
+            border: 2px solid #3498db; 
+            border-radius: 12px;
+            overflow: hidden; 
+            background: #000; 
+            position: relative; 
+            transform: scaleX(-1);
+        }
+        #camera-feed { width: 100%; height: 100%; object-fit: cover; }
+
+        .stats-middle-pane {
+            width: 150px;
+            height: 100%;
+            padding: 8px;
+            background: rgba(0, 0, 0, 0.95);
+            border: 2px solid var(--orange);
+            border-radius: 12px;
+            display: flex; 
+            flex-direction: column; 
             justify-content: flex-start;
+            font-size: 12px;
+            font-weight: 900;
+            flex-shrink: 0;
+            text-align: center;
+            color: white;
+            margin: 0 auto;
         }
-        #camera-panel {
-            flex: 0 0 auto; background: #000; border-radius: 12px; border: 3px solid var(--orange);
-            overflow: hidden; display: none; width: 220px; box-shadow: 0 5px 20px rgba(255,152,0,0.4);
-            height: 100%;
-        }
-        #camera-panel.active { display: block; animation: cameraAppear 0.5s ease-out; }
-        @keyframes cameraAppear { from { opacity: 0; transform: scale(0.9) rotate(-5deg); } to { opacity: 1; transform: scale(1) rotate(0deg); } }
-        #camera-preview { width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1); }
-        .shape-info-panel, #quiz-panel { height: 100%; display: flex; flex-direction: column; }
-        .shape-info-panel {
-            flex: 1 1 auto; background: linear-gradient(145deg, rgba(35,40,60,0.95), rgba(25,30,50,0.95));
-            border-radius: 15px; padding: 6px 6px 0 6px; border: 3px solid #666;
-            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); cursor: pointer;
-            min-width: 160px; max-width: 250px; box-shadow: 0 8px 25px rgba(0,0,0,0.4);
-        }
-        .shape-info-panel.active-panel {
-            border-color: var(--panel-color); box-shadow: 0 0 30px var(--panel-color), inset 0 0 20px rgba(255,255,255,0.3);
-            background: linear-gradient(145deg, rgba(45,50,80,0.98), rgba(35,40,70,0.98));
-        }
-        #camera-panel.active ~ .shape-info-panel { min-width: 140px; max-width: 220px; }
-        .shape-info-panel:hover { transform: translateY(-5px); box-shadow: 0 12px 30px rgba(0,0,0,0.6); }
-        .shape-header { display: flex; justify-content: center; align-items: center; margin-bottom: 4px; padding-bottom: 2px; border-bottom: 2px solid rgba(255,255,255,0.25); }
-        .shape-name { font-size: 18px; font-weight: 900; letter-spacing: -0.5px; }
-        .shape-name.shape-a { color: var(--shape-a-color); text-shadow: 0 0 10px rgba(255,255,0,0.5); }
-        .shape-name.shape-b { color: var(--shape-b-color); text-shadow: 0 0 10px rgba(0,119,255,0.5); }
-        .shape-name.shape-c { color: var(--shape-c-color); text-shadow: 0 0 10px rgba(0,255,0,0.5); }
-        .shape-content { display: flex; flex: 1; flex-direction: column; gap: 4px; height: 100%; }
-        .shape-details { display: flex; flex-direction: column; gap: 4px; flex: 1; }
-        .info-row { display: flex; justify-content: space-between; align-items: center; padding: 4px 0; min-height: 32px; border-bottom: 1px solid rgba(255,255,255,0.15); }
-        .info-label { color: #ddd; display: flex; align-items: center; gap: 5px; font-size: 14px !important; font-weight: 700; text-shadow: 0 0 4px rgba(255,255,255,0.3); white-space: nowrap; }
-        .info-value { font-weight: 900; color: white; font-size: 16px !important; text-shadow: 0 0 5px rgba(255,255,255,0.5); white-space: nowrap; direction: ltr; display: inline-block; text-align: right; min-width: 40px; padding-left: 8px; }
-        .number-value { display: inline; }
-        .question-mark { display: none; font-size: 16px; }
-        .shape-info-panel.hidden-numbers .number-value { display: none; }
-        .shape-info-panel.hidden-numbers .question-mark { display: inline; }
-        .shape-buttons {
-            display: flex !important;
-            gap: 8px;
-            padding-top: 2px;
-            margin-top: auto;
+        
+        .stats-title {
+            font-size: 18px;
+            font-weight: 900;
+            color: #FFD700;
+            text-shadow: 0 0 5px rgba(255, 215, 0, 0.7);
             margin-bottom: 8px;
+            padding: 6px 0;
+            background: rgba(255, 152, 0, 0.2);
+            border-radius: 6px;
+            border: 1px solid rgba(255, 215, 0, 0.3);
+            height: 36px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
-        .shape-btn {
-            flex: 1; padding: 4px; border: none; border-radius: 25px; font-weight: 900;
-            font-size: 14px !important; cursor: pointer; transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-            color: white; text-align: center; min-height: 36px !important; height: 36px;
-            display: flex !important; align-items: center; justify-content: center;
-            letter-spacing: 0.5px; box-shadow: 0 6px 15px rgba(0,0,0,0.3);
-            position: relative; overflow: hidden; border: 2px solid; transform: translateY(0px);
+        
+        .stats-box {
+            background: rgba(255, 152, 0, 0.15);
+            border: 2px solid #3498db;
+            border-radius: 8px;
+            padding: 6px;
+            margin: 4px 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 50px;
+            flex: 1;
         }
-        .shape-btn::after { content: ''; position: absolute; top: 0; left: -100%; width: 100%; height: 100%; background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent); transition: left 0.6s; }
-        .shape-btn:hover::after { left: 100%; }
-        .shape-btn:hover { transform: translateY(-3px); box-shadow: 0 8px 18px rgba(0,0,0,0.4); }
-        .shape-btn:active { transform: translateY(-1px); box-shadow: 0 4px 10px rgba(0,0,0,0.3); }
-        .btn-start { background: linear-gradient(145deg, var(--button-start), #229954); border-color: #27ae60 !important; }
-        .btn-reset { background: linear-gradient(145deg, var(--button-reset), #a93226); border-color: #c0392b !important; }
-        #quiz-panel {
-            flex: 0 0 auto; background: linear-gradient(145deg, var(--quiz-bg), rgba(30,35,55,0.95));
-            border-radius: 15px; padding: 8px; border: 3px solid var(--purple);
-            display: flex; flex-direction: column; width: 200px; box-shadow: 0 8px 25px rgba(147,112,219,0.4);
+        .stats-label {
+            font-size: 12px;
+            color: #fff;
+            margin-bottom: 4px;
+            line-height: 1.3;
+            font-weight: 700;
+        }
+        .stats-value {
+            font-size: 18px;
+            font-weight: 900;
+            color: #FFD700;
+            text-shadow: 0 0 4px rgba(255, 215, 0, 0.5);
+        }
+
+        .stats-left-pane { 
+            flex: 4;
             height: 100%;
+            padding: 8px; 
+            background: rgba(0, 0, 0, 0.9);
+            border: 2px solid var(--green);
+            border-radius: 12px;
+            display: flex; 
+            flex-direction: column;
+            min-width: 0;
+            overflow: hidden;
         }
-        .quiz-header {
-            background: linear-gradient(135deg, var(--purple) 0%, #764ba2 100%);
-            padding: 8px 10px; border-radius: 10px; text-align: center; border: 2px solid #ffffff;
-            box-shadow: 0 4px 12px rgba(102,126,234,0.6); margin-bottom: 8px;
-            min-height: 55px; display: flex; flex-direction: column; justify-content: center;
+        
+        .math-title {
+            color: var(--green); 
+            font-weight: 900; 
+            font-size: 18px; 
+            margin-bottom: 6px; 
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding-bottom: 6px;
+            border-bottom: 2px solid rgba(46, 204, 113, 0.3);
+            height: 36px;
         }
-        .quiz-title-line1 { color: #ffffff; font-size: 13px; font-weight: 800; margin-bottom: 3px; text-shadow: 0 2px 4px rgba(0,0,0,0.4); }
-        .quiz-title-line2 { font-size: 15px; font-weight: 900; text-shadow: 0 2px 4px rgba(0,0,0,0.4); }
-        .quiz-title-line2[data-shape="A"] { color: var(--shape-a-color); }
-        .quiz-title-line2[data-shape="B"] { color: var(--shape-b-color); }
-        .quiz-title-line2[data-shape="C"] { color: var(--shape-c-color); }
-        .quiz-options { display: flex; flex-direction: column; gap: 6px; flex-grow: 1; justify-content: space-between; }
-        .quiz-option {
-            background: linear-gradient(145deg, rgba(255,255,255,0.08), rgba(255,255,255,0.03));
-            border: 2px solid #666; border-radius: 10px; padding: 5px 8px; cursor: pointer;
-            transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); font-size: 15px;
-            font-weight: 700; text-align: center; color: #ddd; position: relative;
-            display: flex; align-items: center; justify-content: space-between; min-height: 42px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+        
+        #current-model-name {
+            color: #ff4444 !important;
+            font-size: 20px !important;
+            font-weight: 900;
+            text-shadow: 0 0 3px rgba(255, 0, 0, 0.5);
         }
-        .quiz-option:hover { transform: scale(1.03); border-color: var(--main); box-shadow: 0 6px 18px rgba(0,242,255,0.3); }
-        .quiz-option.correct { background: linear-gradient(145deg, rgba(46,204,113,0.25), rgba(39,174,96,0.15)); border-color: var(--correct-color); box-shadow: 0 6px 20px rgba(46,204,113,0.5); }
-        .quiz-option.wrong { background: linear-gradient(145deg, rgba(231,76,60,0.25), rgba(192,57,43,0.15)); border-color: var(--wrong-color); box-shadow: 0 6px 20px rgba(231,76,60,0.5); }
-        .option-number { position: absolute; right: 8px; font-size: 14px; font-weight: 900; color: #aaa; width: 25px; height: 25px; display: flex; align-items: center; justify-content: center; border-radius: 50%; background: rgba(0,0,0,0.4); border: 2px solid #666; }
-        .option-content { flex: 1; display: flex; justify-content: center; align-items: center; padding: 0 35px; }
-        .percentage-value { font-size: 18px; font-weight: 900; color: #fff; direction: ltr; display: inline-block; }
-        .emoji-icon { position: absolute; left: 10px; font-size: 22px !important; }
-        #render-area { position: fixed; top: 360px; left: 0; right: 0; bottom: 120px; background: #000; overflow: hidden; display: flex; justify-content: center; align-items: center; z-index: 1; }
-        #three-container { width: 100%; height: 100%; position: relative; }
-        #three-canvas { width: 100%; height: 100%; }
-        #celebration-message {
-            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
-            background: linear-gradient(145deg, rgba(0,0,0,0.98), rgba(50,50,50,0.95));
-            color: var(--gold); padding: 25px 35px; border-radius: 25px; font-size: 26px;
-            display: none; z-index: 2000; text-align: center; border: 5px solid var(--gold);
-            box-shadow: 0 0 40px rgba(255,215,0,0.9); width: 90%; max-width: 600px;
-            backdrop-filter: blur(10px);
+        
+        .math-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            overflow-y: auto;
+            padding: 0;
+            gap: 8px;
         }
-        #celebration-message div:first-child { font-size: 28px; margin-bottom: 10px; font-weight: 900; animation: textGlow 2s infinite; }
-        #celebration-message div:last-child { font-size: 24px; animation: sparkle 1.5s infinite; }
-        @keyframes celebratePop { from { transform: translate(-50%, -50%) scale(0) rotate(-15deg); opacity: 0; } to { transform: translate(-50%, -50%) scale(1) rotate(0deg); opacity: 1; } }
-        @keyframes sparkle { 0%,100% { opacity:1; transform:scale(1); } 50% { opacity:0.7; transform:scale(1.2); } }
-        @keyframes textGlow { 0%,100% { text-shadow:0 0 10px gold,0 0 20px orange; } 50% { text-shadow:0 0 20px gold,0 0 40px orange; } }
-        @keyframes flashGreen { 0%,100% { background: linear-gradient(145deg, var(--quiz-bg), rgba(30,35,55,0.95)); } 50% { background: linear-gradient(145deg, rgba(46,204,113,0.3), rgba(39,174,96,0.2)); border-color: #2ecc71; } }
-        @keyframes flashRed { 0%,100% { background: linear-gradient(145deg, var(--quiz-bg), rgba(30,35,55,0.95)); } 50% { background: linear-gradient(145deg, rgba(231,76,60,0.3), rgba(192,57,43,0.2)); border-color: #e74c3c; } }
-        .flash-green { animation: flashGreen 1s ease; }
-        .flash-red { animation: flashRed 1s ease; }
-        .particle {
-            position: fixed; pointer-events: none; z-index: 999; font-size: 35px;
-            animation: floatParticle 2.8s ease-out forwards; opacity: 1;
+        
+        .math-row {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 100%;
+            gap: 10px;
+            flex: 1;
+            max-height: 45%;
         }
-        @keyframes floatParticle {
-            0% { opacity: 1; transform: translate(0,0) scale(0.5); }
-            40% { opacity: 1; transform: translate(var(--tx), calc(var(--ty)*0.5)) scale(1.0); }
-            80% { opacity: 0.9; transform: translate(calc(var(--tx)*0.8), var(--ty)) scale(1.6); }
-            100% { opacity: 0; transform: translate(calc(var(--tx)*0.5), calc(var(--ty) - 300px)) scale(0.3); }
+        
+        .math-box {
+            border-radius: 8px; 
+            padding: 6px 10px;
+            background: rgba(30, 30, 30, 0.9); 
+            display: flex; 
+            align-items: center; 
+            justify-content: space-between;
+            flex: 1;
+            min-width: 230px;
+            max-width: 250px;
+            gap: 8px;
+            box-shadow: 0 3px 8px rgba(0,0,0,0.4);
+            position: relative;
+            min-height: 60px;
+            max-height: 60px;
+            height: 60px;
+            margin: 0 5px;
         }
-        #bottom-info-bar { position: fixed; bottom: 0; left: 0; right: 0; background: rgba(0,0,0,0.95); padding: 10px; border-top: 3px solid var(--main); display: flex; flex-direction: column; align-items: center; z-index: 1000; min-height: 100px; }
-        #designer-credit { background: linear-gradient(90deg, rgba(0,100,100,0.95), rgba(0,150,150,0.95)); color: #00ffcc; text-align: center; padding: 8px; border-radius: 12px; border: 2px solid #00ff00; font-weight: 900; font-size: 16px; margin-bottom: 6px; width: 100%; text-shadow: 0 0 8px rgba(0,255,204,0.6); }
-        #instructions { text-align: center; font-size: 15px; color: #eee; font-weight: 800; background: rgba(0,0,0,0.8); padding: 8px 12px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.15); width: 100%; white-space: nowrap; overflow-x: auto; }
-        #effects-container { position: fixed; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 900; }
-        .button-press-effect { animation: buttonPress 0.3s ease; }
-        @keyframes buttonPress { 0% { transform: scale(1) translateY(0px); } 50% { transform: scale(0.95) translateY(2px); } 100% { transform: scale(1) translateY(0px); } }
-        @media (max-width: 1400px) { #horizontal-section { height: 290px; } .shape-info-panel { min-width: 150px; } #quiz-panel { width: 190px; } }
-        @media (max-width: 1200px) { #horizontal-section { height: 280px; } .shape-info-panel { min-width: 140px; } #quiz-panel { width: 180px; } }
-        @media (max-width: 1024px) { #control-bar { height: 55px; } .mode-btn, .model-btn { padding: 7px 14px; font-size: 14px; min-width: 70px; height: 40px; } #horizontal-section { height: 270px; } .shape-info-panel { min-width: 135px; } #quiz-panel { width: 170px; } }
-        @media (max-width: 900px) { .shape-info-panel { min-width: 130px; } #quiz-panel { width: 160px; } .info-label, .info-value { font-size: 13px !important; } }
-        @media (max-width: 768px) { #main-menu-btn { top: 6px; right: 6px; padding: 6px 14px; font-size: 13px; min-width: 95px; height: 38px; } #control-bar { padding: 5px 10px; padding-right: 110px; height: 50px; } .mode-btn, .model-btn { padding: 6px 12px; font-size: 13px; min-width: 65px; height: 38px; } .shape-label, .control-mode-label { font-size: 14px; } #horizontal-section { height: 260px; top: 50px; } #render-area { top: 310px; bottom: 100px; } .shape-info-panel { min-width: 120px; } #quiz-panel { width: 150px; } }
-        @media (max-width: 600px) { #horizontal-section { height: 250px; } .shape-info-panel { min-width: 110px; padding: 5px 5px 0 5px; } #quiz-panel { width: 140px; } #camera-panel { width: 130px; } }
+        
+        .step-number {
+            position: absolute;
+            top: -8px;
+            right: 10px;
+            background: var(--green);
+            color: #000;
+            font-weight: bold;
+            padding: 1px 6px;
+            border-radius: 50%;
+            font-size: 10px;
+            border: 1px solid white;
+            min-width: 20px;
+            text-align: center;
+        }
+        
+        .box-text-stack { 
+            display: flex; 
+            flex-direction: column; 
+            gap: 0;
+            text-align: right; 
+            flex: 1;
+            min-width: 160px;
+            font-size: 12px;
+            margin-right: 8px;
+        }
+        .box-text { 
+            color: #fff; 
+            font-weight: 700;
+            direction: rtl;
+            line-height: 1.3;
+            font-size: 12px;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            white-space: nowrap;
+        }
+        
+        .fraction-container { 
+            border-right: 2px solid rgba(255,255,255,0.4); 
+            padding-right: 8px;
+            margin-right: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 40px;
+        }
+        .fraction { 
+            display: flex; 
+            flex-direction: column; 
+            align-items: center; 
+            min-width: 40px;
+        }
+        .num { 
+            border-bottom: 2px solid var(--main); 
+            width: 100%; 
+            text-align: center; 
+            font-size: 15px;
+            font-weight: 900; 
+            color: var(--main); 
+            padding-bottom: 2px;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        .den { 
+            width: 100%; 
+            text-align: center; 
+            font-size: 15px;
+            font-weight: 900; 
+            color: var(--main); 
+            padding-top: 2px;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        .arrow { 
+            font-size: 28px;
+            font-weight: 900; 
+            padding: 0 4px;
+            min-width: 30px;
+            text-align: center;
+            transform: scaleX(1);
+            text-shadow: 
+                0 0 4px #ff0000,
+                0 0 8px #ff9900,
+                2px 2px 0 #ff0000,
+                -2px -2px 0 #ff9900;
+            background: linear-gradient(45deg, #ff0000, #ff9900);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        .result-final { 
+            font-size: 18px !important;
+            color: var(--orange) !important; 
+            font-weight: 900; 
+            padding: 0 5px;
+            text-shadow: 0 0 5px rgba(255, 152, 0, 0.7);
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            min-width: 50px;
+            text-align: center;
+            justify-content: center;
+        }
+
+        #top-panel { 
+            background: #fff; 
+            height: calc(22vh - (0 * var(--cube-height)) + var(--header-increase));
+            display: flex; 
+            padding: 10px; 
+            border-bottom: 3px solid var(--primary);
+            min-height: calc(200px - (0 * var(--cube-height)) + var(--header-increase));
+        }
+        
+        .header-box { 
+            display: grid; 
+            grid-template-columns: repeat(3, 1fr); 
+            gap: 10px; 
+            width: 100%; 
+        }
+        
+        .exercise-card {
+            background: #fff; 
+            border: 2px solid #ddd; 
+            border-radius: 10px;
+            display: flex; 
+            flex-direction: column; 
+            align-items: center; 
+            padding: 6px; 
+            transition: 0.3s;
+            justify-content: space-between;
+            position: relative;
+            cursor: pointer;
+        }
+        .exercise-card.active { 
+            border-color: var(--accent); 
+            background: #fff9f9; 
+            transform: scale(1.02); 
+        }
+
+        .model-name {
+            font-size: 18px; 
+            font-weight: 900; 
+            color: var(--primary);
+            margin-top: 12px;
+            margin-bottom: 10px; 
+            text-align: center;
+            height: 22px; 
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .progress-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            width: 100%;
+            margin: 6px 0; 
+            min-height: 160px;
+        }
+
+        .progress-wrapper-vertical { 
+            width: 70px;
+            height: 150px;
+            background: #eee; 
+            border: 2px solid #333; 
+            border-radius: 6px; 
+            overflow: hidden; 
+            display: flex; 
+            align-items: flex-end; 
+        }
+        .progress-bar-vertical { 
+            width: 100%; 
+            height: 0%; 
+            transition: height 0.5s; 
+        }
+
+        .pct-label {
+            font-weight: 900; 
+            color: var(--accent); 
+            font-size: 30px;
+            margin-top: 10px; 
+            height: 35px; 
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .buttons-container {
+            display: flex;
+            flex-direction: column;
+            gap: 6px; 
+            width: 100%;
+            margin-top: 6px; 
+        }
+
+        .top-buttons {
+            display: flex;
+            gap: 6px; 
+            justify-content: center;
+        }
+
+        .btn-action { 
+            padding: 8px 12px; 
+            font-size: 12px; 
+            border-radius: 5px; 
+            border: none; 
+            cursor: pointer; 
+            color: white; 
+            font-weight: bold; 
+            min-width: 75px; 
+        }
+        .btn-start { background: var(--primary); }
+        .btn-resume { background: #27ae60; color: white; }
+        .btn-reset { background: #e74c3c; }
+
+        #render-area { 
+            flex: 1 1 auto;
+            position: relative; 
+            background: #2c3e50; 
+            overflow: auto;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin: 5px 0;
+            min-height: 350px;
+            max-height: 55vh;
+            height: 55vh;
+            padding: 15px;
+        }
+        
+        #shapes-grid {
+            display: grid;
+            gap: 18px;
+            padding: 20px;
+            justify-content: center;
+            align-items: center;
+            justify-items: center;
+            width: fit-content;
+            max-width: fit-content;
+            height: fit-content;
+            margin: auto;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 20px;
+            border: 2px solid rgba(255, 255, 255, 0.1);
+            grid-auto-rows: 85px;
+        }
+        
+        .shape-box {
+            width: 85px;
+            height: 85px;
+            border: 2px solid #000;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+            transition: all 0.3s;
+            cursor: pointer;
+            font-size: 28px;
+            font-weight: bold;
+            border-radius: 8px;
+        }
+        
+        .shape-box.white {
+            background-color: white;
+        }
+        
+        .shape-box.colored {
+            background-color: #2ecc71;
+        }
+        
+        .shape-box.selected {
+            background-color: black !important;
+            color: white;
+            font-weight: bold;
+            font-size: 30px;
+            border-color: #fff;
+            box-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
+            transform: scale(1.05);
+        }
+        
+        .shape-box:hover:not(.selected) {
+            transform: scale(1.03);
+            box-shadow: 0 0 8px rgba(255, 255, 255, 0.3);
+        }
+        
+        .wait-ring {
+            position: absolute;
+            width: 85%;
+            height: 85%;
+            border: 3px solid #ff0000;
+            border-radius: 50%;
+            top: 7.5%;
+            left: 7.5%;
+            clip-path: inset(100% 0 0 0);
+            transition: clip-path 0.1s linear;
+            pointer-events: none;
+            z-index: 1;
+        }
+        
+        .wait-ring::after {
+            content: '';
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            border: 3px solid #00ff00;
+            border-radius: 50%;
+            top: -3px;
+            left: -3px;
+            animation: pulse 1.5s infinite;
+        }
+        
+        @keyframes pulse {
+            0% { transform: scale(0.8); opacity: 0.5; }
+            50% { transform: scale(1); opacity: 1; }
+            100% { transform: scale(0.8); opacity: 0.5; }
+        }
+
+        #visual-cursor { 
+            position: fixed; 
+            width: 20px;
+            height: 20px;
+            background: radial-gradient(circle, 
+                rgba(0,255,204,0.9) 0%, 
+                rgba(255,68,68,0.7) 30%, 
+                rgba(0,255,204,0.1) 70%);
+            border: 2px solid #fff; 
+            border-radius: 50%; 
+            pointer-events: none; 
+            z-index: 9999; 
+            transform: translate(-50%, -50%);
+            box-shadow: 
+                0 0 10px var(--main), 
+                0 0 20px var(--main),
+                0 0 10px var(--cursor-red),
+                0 0 20px var(--cursor-red);
+            transition: width 0.2s, height 0.2s;
+            display: none;
+        }
+        #visual-cursor.clicking {
+            width: 16px; 
+            height: 16px;
+            background: radial-gradient(circle, 
+                rgba(255,215,0,1) 0%, 
+                rgba(255,68,68,0.8) 40%, 
+                rgba(255,215,0,0.4) 70%);
+        }
+
+        .sparkle { 
+            position: fixed; 
+            width: 6px; 
+            height: 6px; 
+            border-radius: 50%; 
+            pointer-events: none; 
+            z-index: 9998; 
+            transform: translate(-50%, -50%);
+            animation: sparkleAnim 0.8s ease-out forwards;
+            background: rgba(255, 68, 68, 0.8);
+        }
+        @keyframes sparkleAnim {
+            0% { opacity: 1; transform: translate(-50%, -50%) scale(0); }
+            100% { opacity: 0; transform: translate(-50%, -50%) scale(2); }
+        }
+
+        .glow-trail { 
+            position: fixed; 
+            width: 10px; 
+            height: 10px; 
+            border-radius: 50%; 
+            pointer-events: none; 
+            z-index: 9997; 
+            transform: translate(-50%, -50%);
+            animation: fadeTrail 1s ease-out forwards;
+            background: rgba(255, 68, 68, 0.6);
+        }
+        @keyframes fadeTrail {
+            0% { opacity: 0.6; transform: translate(-50%, -50%) scale(1); }
+            100% { opacity: 0; transform: translate(-50%, -50%) scale(0); }
+        }
+
+        #celebration-message { 
+            position: fixed; 
+            top: 50%; 
+            left: 50%; 
+            transform: translate(-50%, -50%); 
+            background: linear-gradient(135deg, rgba(0,0,0,0.95), rgba(50,50,50,0.95));
+            color: var(--gold); 
+            padding: 25px 40px; 
+            border-radius: 25px; 
+            font-size: 1.8rem; 
+            display: none; 
+            z-index: 5000; 
+            text-align: center; 
+            border: 4px solid var(--gold);
+            box-shadow: 0 0 50px rgba(255,215,0,0.7);
+            animation: celebratePop 0.8s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+            white-space: nowrap;
+        }
+        @keyframes celebratePop { 
+            from { transform: translate(-50%, -50%) scale(0) rotate(-10deg); opacity: 0; } 
+            to { transform: translate(-50%, -50%) scale(1) rotate(0deg); opacity: 1; } 
+        }
+
+        .emoji-particle { 
+            position: fixed; 
+            pointer-events: none; 
+            z-index: 4000; 
+            font-size: 3rem;
+            animation: floatUp 3s ease-out forwards;
+        }
+        @keyframes floatUp {
+            0% { opacity: 1; transform: translate(0, 0) rotate(0deg); }
+            100% { opacity: 0; transform: translate(var(--tx), var(--ty)) rotate(var(--rot)); }
+        }
+
+        #bottom-info-bar { 
+            background: rgba(0,0,0,0.9); 
+            color: white; 
+            padding: 20px 25px;
+            border-top: 3px solid var(--main);
+            position: relative;
+            z-index: 1000;
+            min-height: 100px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            flex-shrink: 0;
+            margin-top: 10px;
+            margin-bottom: 0;
+        }
+        #designer-credit { 
+            background: linear-gradient(90deg, rgba(0,100,100,0.9), rgba(0,150,150,0.9));
+            color: #00ffcc; 
+            text-align: center; 
+            padding: 15px;
+            border-radius: 12px; 
+            border: 2px solid #00ff00; 
+            font-weight: bold; 
+            font-size: 24px;
+            margin-bottom: 12px;
+            text-shadow: 0 0 5px rgba(0,255,204,0.5);
+            box-shadow: 0 0 15px rgba(0,255,0,0.3);
+            width: 100%;
+            line-height: 1.5;
+        }
+        #instructions { 
+            text-align: center; 
+            font-size: 22px;
+            color: #ddd; 
+            font-weight: bold;
+            background: rgba(0,0,0,0.7);
+            padding: 12px 18px;
+            border-radius: 10px;
+            border: 1px solid rgba(255,255,255,0.1);
+            width: 100%;
+            line-height: 1.5;
+        }
+
+        @media (max-width: 1024px) {
+            #header-section {
+                height: calc(140px + (2.5 * var(--cube-height)));
+                min-height: 220px;
+                padding: 6px;
+                gap: 8px;
+            }
+            
+            #camera-wrapper {
+                width: 130px;
+            }
+            
+            .stats-middle-pane {
+                width: 140px;
+            }
+            
+            .stats-box {
+                min-height: 45px;
+                padding: 5px;
+            }
+            
+            .stats-label {
+                font-size: 11px;
+            }
+            
+            .stats-value {
+                font-size: 16px;
+            }
+            
+            .math-box {
+                min-width: 200px;
+                max-width: 220px;
+                min-height: 55px;
+                max-height: 55px;
+                height: 55px;
+            }
+            
+            .box-text {
+                font-size: 11px;
+            }
+            
+            .box-text-stack {
+                min-width: 140px;
+            }
+            
+            .num, .den {
+                font-size: 14px;
+            }
+            
+            .arrow {
+                font-size: 24px;
+            }
+            
+            .result-final {
+                font-size: 16px;
+            }
+            
+            #top-panel {
+                height: calc(20vh - (0 * var(--cube-height)) + var(--header-increase));
+                min-height: calc(180px - (0 * var(--cube-height)) + var(--header-increase));
+            }
+            
+            .progress-wrapper-vertical {
+                width: 65px;
+                height: 140px;
+            }
+            
+            .pct-label {
+                font-size: 28px;
+            }
+            
+            .model-name {
+                font-size: 16px;
+            }
+            
+            #render-area {
+                min-height: 320px;
+                max-height: 45vh;
+                height: 45vh;
+                padding: 15px;
+            }
+            
+            .shape-box {
+                width: 55px;
+                height: 55px;
+                font-size: 22px;
+            }
+            
+            #shapes-grid {
+                gap: 15px;
+                padding: 18px;
+                grid-auto-rows: 55px;
+            }
+            
+            .shape-box.selected {
+                font-size: 24px;
+            }
+            
+            #designer-credit {
+                font-size: 20px;
+                padding: 12px;
+            }
+            
+            #instructions {
+                font-size: 18px;
+                padding: 10px 15px;
+            }
+        }
+
+        @media (max-width: 768px) {
+            #app-container {
+                padding: 3px;
+            }
+            
+            #control-bar {
+                padding: 6px;
+                gap: 8px;
+                flex-direction: column;
+                padding-right: 6px;
+            }
+            
+            #main-menu-btn {
+                top: 5px;
+                right: 5px;
+                padding: 6px 12px;
+                font-size: 12px;
+                min-width: 85px;
+                height: 36px;
+            }
+            
+            .control-section {
+                gap: 6px;
+            }
+            
+            .mode-btn, .model-btn {
+                padding: 6px 12px;
+                font-size: 12px;
+                min-width: 60px;
+                height: 36px;
+            }
+            
+            .shape-label, .control-mode-label {
+                font-size: 14px;
+            }
+            
+            #header-section {
+                flex-direction: column;
+                height: auto;
+                min-height: calc(300px + (2.5 * var(--cube-height)));
+                gap: 8px;
+            }
+            
+            #camera-wrapper {
+                width: 100%;
+                height: 100px;
+                order: 1;
+            }
+            
+            .stats-middle-pane {
+                width: 100%;
+                height: auto;
+                padding: 8px;
+                margin: 6px 0;
+                flex-direction: row;
+                flex-wrap: wrap;
+                justify-content: space-around;
+                order: 2;
+            }
+            
+            .stats-title {
+                width: 100%;
+                margin-bottom: 6px;
+                font-size: 16px;
+                padding: 5px 0;
+                height: 32px;
+            }
+            
+            .stats-box {
+                flex: 1;
+                min-width: 110px;
+                margin: 3px;
+                padding: 5px;
+                min-height: 40px;
+            }
+            
+            .stats-label {
+                font-size: 10px;
+            }
+            
+            .stats-value {
+                font-size: 15px;
+            }
+            
+            .stats-left-pane {
+                width: 100%;
+                min-width: unset;
+                height: auto;
+                padding: 8px;
+                order: 3;
+            }
+            
+            .math-title {
+                height: 32px;
+                font-size: 16px;
+                margin-bottom: 4px;
+            }
+            
+            #current-model-name {
+                font-size: 18px !important;
+            }
+            
+            .math-content {
+                flex-direction: column;
+                gap: 6px;
+            }
+            
+            .math-row {
+                flex-direction: column;
+                gap: 6px;
+                max-height: 48%;
+            }
+            
+            .math-box {
+                min-width: 95%;
+                max-width: 95%;
+                padding: 5px 8px;
+                margin: 0 auto;
+                min-height: 50px;
+                max-height: 50px;
+                height: 50px;
+            }
+            
+            .box-text-stack {
+                min-width: 130px;
+            }
+            
+            .box-text {
+                font-size: 10px;
+            }
+            
+            .arrow {
+                transform: rotate(90deg) scaleX(1);
+                font-size: 22px;
+                margin: 3px 0;
+            }
+            
+            #render-area {
+                min-height: 280px;
+                max-height: 40vh;
+                height: 40vh;
+                padding: 12px;
+            }
+            
+            #top-panel {
+                height: calc(22vh - (0 * var(--cube-height)) + var(--header-increase));
+                min-height: calc(170px - (0 * var(--cube-height)) + var(--header-increase));
+            }
+            
+            .header-box {
+                grid-template-columns: 1fr;
+                gap: 8px;
+            }
+            
+            .exercise-card {
+                padding: 6px;
+            }
+            
+            .model-name {
+                font-size: 16px;
+                height: 22px;
+                margin-top: 8px;
+            }
+            
+            .progress-container {
+                min-height: 150px;
+            }
+            
+            .progress-wrapper-vertical {
+                width: 60px;
+                height: 130px;
+            }
+            
+            .pct-label {
+                font-size: 26px;
+                height: 30px;
+            }
+            
+            .btn-action {
+                padding: 7px 10px;
+                font-size: 11px;
+                min-width: 70px;
+            }
+            
+            .shape-box {
+                width: 50px;
+                height: 50px;
+                font-size: 20px;
+            }
+            
+            #shapes-grid {
+                gap: 12px;
+                padding: 15px;
+                grid-auto-rows: 50px;
+            }
+            
+            .shape-box.selected {
+                font-size: 22px;
+            }
+            
+            #designer-credit {
+                font-size: 18px;
+                padding: 10px;
+            }
+            
+            #instructions {
+                font-size: 16px;
+                padding: 8px 12px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            #control-bar {
+                padding-right: 90px;
+            }
+            
+            #main-menu-btn {
+                min-width: 80px;
+                font-size: 11px;
+                padding: 5px 10px;
+            }
+            
+            .shape-label, .control-mode-label {
+                font-size: 13px;
+            }
+            
+            .control-section {
+                gap: 5px;
+            }
+            
+            .math-box {
+                padding: 4px 6px;
+                min-height: 45px;
+                max-height: 45px;
+                height: 45px;
+            }
+            
+            .box-text {
+                font-size: 9px;
+            }
+            
+            .box-text-stack {
+                min-width: 110px;
+                margin-right: 5px;
+            }
+            
+            .num, .den {
+                font-size: 12px;
+            }
+            
+            .stats-title {
+                font-size: 14px;
+                height: 28px;
+            }
+            
+            .stats-box {
+                min-width: 90px;
+                padding: 4px;
+                min-height: 35px;
+            }
+            
+            .stats-label {
+                font-size: 9px;
+            }
+            
+            .stats-value {
+                font-size: 13px;
+            }
+            
+            #current-model-name {
+                font-size: 16px !important;
+            }
+            
+            .math-title {
+                font-size: 14px;
+                height: 28px;
+            }
+        }
     </style>
 </head>
 <body>
-<button id="main-menu-btn">🏠 القائمة الرئيسية</button>
-<div id="control-bar">
-    <div class="control-section">
-        <span class="shape-label">الشكل :</span>
-        <button class="model-btn" onclick="setModel('A', false)" id="btn-A" data-shape="A">( A )</button>
-        <button class="model-btn" onclick="setModel('B', false)" id="btn-B" data-shape="B">( B )</button>
-        <button class="model-btn" onclick="setModel('C', false)" id="btn-C" data-shape="C">( C )</button>
-        <span style="margin: 0 8px; color: var(--orange); font-size: 18px;">↔️</span>
-        <span class="control-mode-label">التحكم :</span>
+
+<button id="main-menu-btn" onclick="location.href='الرئيسية.html'">🏠 القائمة الرئيسية</button>
+
+<div id="visual-cursor"></div>
+
+<div id="celebration-message">
+    ممتاز وأحسنت يا بطل
+    ✨❤️🎁🤍⭐🏅🎶💎🌙🏆
+</div>
+
+<div id="app-container">
+    <div id="control-bar">
+        <div class="control-section">
+            <span class="shape-label">الشكل :</span>
+            <button class="model-btn active" onclick="setModel('A')" id="btn-model-A">( A )</button>
+            <button class="model-btn" onclick="setModel('B')" id="btn-model-B">( B )</button>
+            <button class="model-btn" onclick="setModel('C')" id="btn-model-C">( C )</button>
+            <span class="separator">↔️</span>
+            <span class="control-mode-label" id="control-mode-label">التحكم :</span>
+        </div>
+        <div class="control-section">
+            <button class="mode-btn active" onclick="setMode('touch')" id="btn-touch">👆 اللمس</button>
+            <button class="mode-btn" onclick="setMode('mouse')" id="btn-mouse">🖱️ الماوس</button>
+            <button class="mode-btn camera-btn" onclick="setMode('camera')" id="btn-camera">📷 الكاميرا</button>
+        </div>
     </div>
-    <div class="control-section">
-        <button class="mode-btn active" onclick="setMode('touch')" id="btn-touch">👆 اللمس</button>
-        <button class="mode-btn" onclick="setMode('mouse')" id="btn-mouse">🖱️ الماوس</button>
-        <button class="mode-btn" onclick="setMode('camera')" id="btn-camera">📷 الكاميرا</button>
+
+    <div id="header-section">
+        <div id="camera-wrapper">
+            <video id="camera-feed" autoplay playsinline muted></video>
+        </div>
+
+        <div class="stats-middle-pane">
+            <div class="stats-title">الإحصاء</div>
+            <div class="stats-box">
+                <div class="stats-label">عدد المربعات الكلي : </div>
+                <div class="stats-value" id="val-total">20</div>
+            </div>
+            <div class="stats-box">
+                <div class="stats-label">عدد المربعات ⬜ : </div>
+                <div class="stats-value" id="val-white-total">8</div>
+            </div>
+            <div class="stats-box">
+                <div class="stats-label" id="colored-text">عدد المربعات 🟩 : </div>
+                <div class="stats-value" id="val-colored-total">12</div>
+            </div>
+        </div>
+
+        <div class="stats-left-pane">
+            <div class="math-title">
+                <span>العمليّة الحسابيّة بالتفصيل</span>
+                <span id="current-model-name" style="color: #ff4444; font-size: 20px;">الشكل ( A )</span>
+            </div>
+            <div id="math-display" class="math-content"></div>
+        </div>
+    </div>
+
+    <div id="top-panel">
+        <div class="header-box" id="cards-container"></div>
+    </div>
+
+    <div id="render-area">
+        <div id="shapes-grid"></div>
+    </div>
+
+    <div id="bottom-info-bar">
+        <div id="designer-credit">تصميم المهندس : زين العابدين مصطفى Žąëŋ</div>
+        <div id="instructions">اختر الشكل ثم طريقة التحكم واضغط "ابدأ" على التمرين</div>
     </div>
 </div>
-<div id="horizontal-section">
-    <div id="camera-panel"><video id="camera-preview" autoplay playsinline muted></video></div>
-    <div class="shape-info-panel shape-a hidden-numbers" id="shape-panel-a" onclick="selectShape('A')">
-        <div class="shape-header"><div class="shape-name shape-a">الشكل ( A )</div></div>
-        <div class="shape-content">
-            <div class="shape-details">
-                <div class="info-row"><span class="info-label">النسبة المئوية :</span><span class="info-value"><span class="number-value" id="percentage-a"></span><span class="question-mark">⁉️</span></span></div>
-                <div class="info-row"><span class="info-label">المربعات الملونة :</span><span class="info-value"><span class="number-value" id="colored-a"></span><span class="question-mark">⁉️</span></span></div>
-                <div class="info-row"><span class="info-label">المربعات البيضاء :</span><span class="info-value"><span class="number-value" id="white-a"></span><span class="question-mark">⁉️</span></span></div>
-                <div class="info-row"><span class="info-label">المربعات الكلية :</span><span class="info-value"><span class="number-value" id="total-a"></span><span class="question-mark">⁉️</span></span></div>
-            </div>
-            <div class="shape-buttons"><button class="shape-btn btn-start" onclick="startExercise('A', event)">ابدأ</button><button class="shape-btn btn-reset" onclick="resetExercise('A', event)">إعادة</button></div>
-        </div>
-    </div>
-    <div class="shape-info-panel shape-b hidden-numbers" id="shape-panel-b" onclick="selectShape('B')">
-        <div class="shape-header"><div class="shape-name shape-b">الشكل ( B )</div></div>
-        <div class="shape-content">
-            <div class="shape-details">
-                <div class="info-row"><span class="info-label">النسبة المئوية :</span><span class="info-value"><span class="number-value" id="percentage-b"></span><span class="question-mark">⁉️</span></span></div>
-                <div class="info-row"><span class="info-label">المربعات الملونة :</span><span class="info-value"><span class="number-value" id="colored-b"></span><span class="question-mark">⁉️</span></span></div>
-                <div class="info-row"><span class="info-label">المربعات البيضاء :</span><span class="info-value"><span class="number-value" id="white-b"></span><span class="question-mark">⁉️</span></span></div>
-                <div class="info-row"><span class="info-label">المربعات الكلية :</span><span class="info-value"><span class="number-value" id="total-b"></span><span class="question-mark">⁉️</span></span></div>
-            </div>
-            <div class="shape-buttons"><button class="shape-btn btn-start" onclick="startExercise('B', event)">ابدأ</button><button class="shape-btn btn-reset" onclick="resetExercise('B', event)">إعادة</button></div>
-        </div>
-    </div>
-    <div class="shape-info-panel shape-c hidden-numbers" id="shape-panel-c" onclick="selectShape('C')">
-        <div class="shape-header"><div class="shape-name shape-c">الشكل ( C )</div></div>
-        <div class="shape-content">
-            <div class="shape-details">
-                <div class="info-row"><span class="info-label">النسبة المئوية :</span><span class="info-value"><span class="number-value" id="percentage-c"></span><span class="question-mark">⁉️</span></span></div>
-                <div class="info-row"><span class="info-label">المربعات الملونة :</span><span class="info-value"><span class="number-value" id="colored-c"></span><span class="question-mark">⁉️</span></span></div>
-                <div class="info-row"><span class="info-label">المربعات البيضاء :</span><span class="info-value"><span class="number-value" id="white-c"></span><span class="question-mark">⁉️</span></span></div>
-                <div class="info-row"><span class="info-label">المربعات الكلية :</span><span class="info-value"><span class="number-value" id="total-c"></span><span class="question-mark">⁉️</span></span></div>
-            </div>
-            <div class="shape-buttons"><button class="shape-btn btn-start" onclick="startExercise('C', event)">ابدأ</button><button class="shape-btn btn-reset" onclick="resetExercise('C', event)">إعادة</button></div>
-        </div>
-    </div>
-    <div id="quiz-panel">
-        <div class="quiz-header"><div class="quiz-title-line1">اختر الإجابة الصحيحة</div><div class="quiz-title-line2" id="quiz-title" data-shape="A">الشكل ( A )</div></div>
-        <div class="quiz-options">
-            <div class="quiz-option" onclick="checkAnswer(1)" id="option-1-btn"><span class="option-number">1</span><div class="option-content"><span class="percentage-value" id="option-1">28%</span></div><span class="emoji-icon" id="emoji-1"></span></div>
-            <div class="quiz-option" onclick="checkAnswer(2)" id="option-2-btn"><span class="option-number">2</span><div class="option-content"><span class="percentage-value" id="option-2">31%</span></div><span class="emoji-icon" id="emoji-2"></span></div>
-            <div class="quiz-option" onclick="checkAnswer(3)" id="option-3-btn"><span class="option-number">3</span><div class="option-content"><span class="percentage-value" id="option-3">17%</span></div><span class="emoji-icon" id="emoji-3"></span></div>
-        </div>
-    </div>
-</div>
-<div id="render-area"><div id="three-container"><canvas id="three-canvas"></canvas></div></div>
-<div id="celebration-message"><div>ممتاز وأحسنت يا بطل</div><div>✨🌟⭐💫💎🏆🎉🎊</div></div>
-<div id="bottom-info-bar"><div id="designer-credit">تصميم المهندس : زين العابدين مصطفى</div><div id="instructions">👆 إصبع واحد للدوران | 👆👆 إصبعين للتقريب والتبعيد</div></div>
-<div id="effects-container"></div>
-<script src="full-permissions.js"></script>
-<script src="system-config.js"></script>
-<script src="save-results.js"></script>
-<script src="data-manager.js"></script>
-<script src="exercise-helper.js"></script>
-<!-- باقي السكربتات كما هي، تم إضافة full-permissions.js في الأعلى -->
+
 <script>
-let rotationSensitivityX = 2.0;
-let rotationSensitivityY = 4.0;
-const zoomMin = 0.5;
-const zoomMax = 3.0;
-const COLOR_WHITE = 0xFFFFFF;
-const COLOR_BORDER = 0xFF0000;
-const COLOR_A = 0xFFFF00;
-const COLOR_B = 0x0077FF;
-const COLOR_C = 0x00FF00;
+    const emojis = ['🦋', '🎊', '🎶', '🎉', '🎈', '🎁', '🎀', '🌸', '🌞', '🕊️', '🍬', '🍭', '🧁', '🤍', '🧸', '🌙', '🔥', '🐥', '🎵'];
+    let currentMode = 'touch';
+    let cameraStream = null;
+    let trackingActive = false;
+    let lastX = window.innerWidth / 2, lastY = window.innerHeight / 2;
+    let hoverTarget = null, hoverStartTime = 0;
+    const DWELL_TIME = 1000;
+    const SMOOTHING = 0.05;
+    let lastValidPosition = { x: window.innerWidth / 2, y: window.innerHeight / 2 };
+    
+    let lastSoundTime = 0;
+    const soundInterval = 120;
+    let audioCtx = null;
+    
+    const sparkleColors = ['#ff4444', '#4e9cd4', '#ffdd44', '#ff8811', '#5a2d7a', '#1a836f', '#ff5599'];
+    
+    let models = {
+        A: { 
+            name: "الشكل ( A )",
+            total: 20, 
+            white: 8, 
+            colored: 12,
+            div: 2,
+            mult: 10, 
+            targetResult: 40,
+            color: '#2ecc71',
+            emoji: '🟩',
+            selections: [],
+            solved: 0,
+            rows: 2,
+            cols: 10
+        },
+        B: { 
+            name: "الشكل ( B )",
+            total: 60, 
+            white: 24, 
+            colored: 36,
+            div: 6, 
+            mult: 10, 
+            targetResult: 40,
+            color: '#e67e22',
+            emoji: '🟧',
+            selections: [],
+            solved: 0,
+            rows: 6,
+            cols: 10
+        },
+        C: { 
+            name: "الشكل ( C )",
+            total: 40, 
+            white: 28, 
+            colored: 12,
+            div: 4, 
+            mult: 10, 
+            targetResult: 70,
+            color: '#3498db',
+            emoji: '🟦',
+            selections: [],
+            solved: 0,
+            rows: 10,
+            cols: 4
+        }
+    };
+    
+    let currentModel = 'A';
 
-var THREE = {};
-(function() {
-    THREE.Vector3 = function(x,y,z){ this.x=x||0; this.y=y||0; this.z=z||0; };
-    THREE.Vector3.prototype = {
-        set: function(x,y,z){ this.x=x; this.y=y; this.z=z; return this; },
-        clone: function(){ return new THREE.Vector3(this.x,this.y,this.z); },
-        copy: function(v){ this.x=v.x; this.y=v.y; this.z=v.z; return this; },
-        add: function(v){ this.x+=v.x; this.y+=v.y; this.z+=v.z; return this; },
-        multiplyScalar: function(s){ this.x*=s; this.y*=s; this.z*=s; return this; }
-    };
-    THREE.Color = function(c){ if(typeof c==='number') this.setHex(c); else { this.r=1; this.g=1; this.b=1; } };
-    THREE.Color.prototype = {
-        setHex: function(h){ h=Math.floor(h); this.r=(h>>16&255)/255; this.g=(h>>8&255)/255; this.b=(h&255)/255; return this; },
-        clone: function(){ return new THREE.Color().copy(this); },
-        copy: function(c){ this.r=c.r; this.g=c.g; this.b=c.b; return this; }
-    };
-    THREE.Scene = function(){ this.children=[]; this.background=null; };
-    THREE.Scene.prototype = {
-        add: function(o){ this.children.push(o); },
-        remove: function(o){ var i=this.children.indexOf(o); if(i!==-1) this.children.splice(i,1); }
-    };
-    THREE.PerspectiveCamera = function(fov,aspect,near,far){ this.fov=fov; this.aspect=aspect; this.near=near; this.far=far; this.position=new THREE.Vector3(); };
-    THREE.Object3D = function(){ this.position=new THREE.Vector3(); this.rotation=new THREE.Vector3(); this.scale=new THREE.Vector3(1,1,1); this.children=[]; this.userData={}; this.uuid=Math.random().toString(36); };
-    THREE.Object3D.prototype = { add: function(o){ this.children.push(o); } };
-    THREE.Group = function(){ THREE.Object3D.call(this); }; THREE.Group.prototype = Object.create(THREE.Object3D.prototype);
-    THREE.BoxGeometry = function(w,h,d){ this.width=w; this.height=h; this.depth=d; this.vertices=this.generateVertices(); };
-    THREE.BoxGeometry.prototype = {
-        generateVertices: function(){ var w=this.width/2, h=this.height/2, d=this.depth/2; return [[-w,-h,-d],[w,-h,-d],[w,h,-d],[-w,h,-d],[-w,-h,d],[w,-h,d],[w,h,d],[-w,h,d]]; }
-    };
-    THREE.MeshStandardMaterial = function(p){ p=p||{}; this.color=p.color!==undefined?new THREE.Color(p.color):new THREE.Color(0xffffff); this.emissive=p.emissive!==undefined?new THREE.Color(p.emissive):new THREE.Color(0x000000); this.emissiveIntensity=p.emissiveIntensity||1; this.roughness=p.roughness||0.5; this.metalness=p.metalness||0.5; };
-    THREE.LineBasicMaterial = function(p){ p=p||{}; this.color=p.color!==undefined?new THREE.Color(p.color):new THREE.Color(0xffffff); this.linewidth=p.linewidth||1; this.opacity=p.opacity||1; };
-    THREE.Mesh = function(g,m){ THREE.Object3D.call(this); this.geometry=g; this.material=m; }; THREE.Mesh.prototype = Object.create(THREE.Object3D.prototype);
-    THREE.EdgesGeometry = function(g){ this.geometry=g; };
-    THREE.LineSegments = function(g,m){ THREE.Object3D.call(this); this.geometry=g; this.material=m; }; THREE.LineSegments.prototype = Object.create(THREE.Object3D.prototype);
-    THREE.AmbientLight = function(c,i){ this.color=new THREE.Color(c); this.intensity=i||1; };
-    THREE.WebGLRenderer = function(p){ p=p||{}; this.domElement=p.canvas||document.createElement('canvas'); this.context=this.domElement.getContext('2d'); this.shadowMap={enabled:false}; };
-    THREE.WebGLRenderer.prototype = {
-        setSize: function(w,h){ this.domElement.width=w; this.domElement.height=h; },
-        render: function(scene,camera){
-            var ctx=this.context, w=this.domElement.width, h=this.domElement.height;
-            if(scene.background){ ctx.fillStyle=this.colorToStyle(scene.background); ctx.fillRect(0,0,w,h); }
-            this.renderObject(scene,camera,ctx,w,h);
-        },
-        renderObject: function(o,camera,ctx,w,h){
-            if(o.children) for(var i=0;i<o.children.length;i++) this.renderObject(o.children[i],camera,ctx,w,h);
-            if(o.geometry&&o.material) this.renderMesh(o,camera,ctx,w,h);
-        },
-        renderMesh: function(mesh,camera,ctx,w,h){
-            var vertices=mesh.geometry.vertices; if(!vertices) return;
-            var proj=[], cx=w/2, cy=h/2;
-            var rotX=modelGroup?modelGroup.rotation.x:0, rotY=modelGroup?modelGroup.rotation.y:0, scaleFactor=80*(modelGroup?modelGroup.scale.x:1);
-            var waveY=Math.sin(animationTime*4.5+mesh.userData.row*0.8+mesh.userData.col*0.5)*0.25;
-            for(var i=0;i<vertices.length;i++){
-                var v=vertices[i], x=v[0]+mesh.position.x, y=v[1]+mesh.position.y+waveY, z=v[2]+mesh.position.z;
-                var cosY=Math.cos(rotY), sinY=Math.sin(rotY);
-                var x1=x*cosY - z*sinY;
-                var z1=x*sinY + z*cosY;
-                var cosX=Math.cos(rotX), sinX=Math.sin(rotX);
-                var y2=y*cosX - z1*sinX;
-                var z2=y*sinX + z1*cosX;
-                var depthFactor = 600 / (600 + z2 * scaleFactor);
-                var sx = cx + x1 * scaleFactor * depthFactor;
-                var sy = cy + y2 * scaleFactor * depthFactor;
-                proj.push([sx, sy, z2]);
+    function getAudioContext() {
+        if (!audioCtx) {
+            audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            if (window.appSystem) {
+                window.appSystem.audioContext = audioCtx;
             }
-            this.drawCube(ctx, proj, mesh.material);
-        },
-        drawCube: function(ctx, proj, material){
-            var faces=[[0,1,2,3],[4,5,6,7],[0,1,5,4],[2,3,7,6],[0,3,7,4],[1,2,6,5]];
-            var depths=faces.map(f=>({face:f, z:(proj[f[0]][2]+proj[f[1]][2]+proj[f[2]][2]+proj[f[3]][2])/4}));
-            depths.sort((a,b)=>b.z-a.z);
-            for(var i=0;i<depths.length;i++){
-                var f=depths[i].face; ctx.beginPath(); ctx.moveTo(proj[f[0]][0],proj[f[0]][1]);
-                for(var j=1;j<f.length;j++) ctx.lineTo(proj[f[j]][0],proj[f[j]][1]);
-                ctx.closePath();
-                var c=material.color;
-                ctx.fillStyle='rgb('+Math.floor(c.r*255)+','+Math.floor(c.g*255)+','+Math.floor(c.b*255)+')';
-                ctx.fill();
-            }
-            ctx.shadowColor='rgba(255,80,80,0.6)'; ctx.shadowBlur=4; ctx.strokeStyle='#FF5050'; ctx.lineWidth=2;
-            for(i=0;i<depths.length;i++){
-                var f=depths[i].face; ctx.beginPath(); ctx.moveTo(proj[f[0]][0],proj[f[0]][1]);
-                for(j=1;j<f.length;j++) ctx.lineTo(proj[f[j]][0],proj[f[j]][1]);
-                ctx.closePath(); ctx.stroke();
-            }
-            ctx.shadowBlur=0;
-        },
-        colorToStyle: function(c){ return 'rgb('+Math.floor(c.r*255)+','+Math.floor(c.g*255)+','+Math.floor(c.b*255)+')'; }
-    };
-})();
+        }
+        if (audioCtx.state === 'suspended') audioCtx.resume();
+        return audioCtx;
+    }
 
-let audioCtx=null, audioEnabled=false, lastSoundTime=0, soundCooldown=300;
-let scene, camera3D, renderer, modelGroup, ambientLight;
-let targetScale=2.0, targetRotX=0.2, targetRotY=0.5, animationTime=0, cubePulsePhase=0;
-let currentTheme='A', currentMode='touch', isAnimatingCubes=false, coloringFrameId=null, currentBlinkAnimation=null;
-let quizLocked=false, quizOptionsEnabled=false;
-let targetCameraRotX=targetRotX, targetCameraRotY=targetRotY, targetCameraZoom=targetScale;
+    const moveFrequencies = [330, 392, 440, 523, 587, 659, 784];
+    function playMoveSound() {
+        const now = Date.now();
+        if (now - lastSoundTime < soundInterval) return;
+        lastSoundTime = now;
+        
+        const freq = moveFrequencies[Math.floor(Math.random() * moveFrequencies.length)];
+        const type = ['sine', 'triangle', 'sawtooth'][Math.floor(Math.random() * 3)];
+        playNote(freq, type, 0.12, 0.06);
+    }
 
-const exerciseData = {
-    'A':{percentage:17, correctPosition:3, options:[28,31,17], color:COLOR_A, name:'الشكل ( A )', filledSquares:17, totalSquares:100, coloredSquares:0, whiteSquares:100, started:false, answerSelected:false},
-    'B':{percentage:31, correctPosition:2, options:[28,31,35], color:COLOR_B, name:'الشكل ( B )', filledSquares:31, totalSquares:100, coloredSquares:0, whiteSquares:100, started:false, answerSelected:false},
-    'C':{percentage:49, correctPosition:3, options:[46,52,49], color:COLOR_C, name:'الشكل ( C )', filledSquares:49, totalSquares:100, coloredSquares:0, whiteSquares:100, started:false, answerSelected:false}
-};
+    function playNote(freq, type = 'sine', duration = 0.15, vol = 0.08) {
+        try {
+            const ctx = getAudioContext();
+            const osc = ctx.createOscillator();
+            const g = ctx.createGain();
+            osc.type = type;
+            osc.frequency.setValueAtTime(freq, ctx.currentTime);
+            g.gain.setValueAtTime(vol, ctx.currentTime);
+            g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + duration);
+            osc.connect(g); g.connect(ctx.destination);
+            osc.start(); osc.stop(ctx.currentTime + duration);
+        } catch(e) {}
+    }
 
-const CONTROL_SETTINGS = {
-    ZOOM:{ MOUSE_SPEED:0.001, TOUCH_SPEED:0.1, MIN:zoomMin, MAX:zoomMax },
-    ROTATION:{ MOUSE_SPEED:0.01, TOUCH_SPEED:0.008, CAMERA_SPEED:0.08, SMOOTHING:0.03 },
-    CAMERA:{ SMOOTHING:0.8, THRESHOLD:6, UPDATE_RATE:100, ZOOM_SPEED:0.02,
-             OPEN_HAND_THRESHOLD:20 }
-};
+    function playSuccessSound() {
+        playNote(784, 'sine', 0.2, 0.15);
+    }
 
-const soundLibrary = {
-    move:[{freqs:[523.25,659.25],type:'sine',duration:0.2,vol:0.08}],
-    zoom:[{freqs:[523.25,659.25,783.99],type:'sine',duration:0.3,vol:0.12}],
-    select:[{freqs:[659.25,830.61,1046.50],type:'sine',duration:0.4,vol:0.15}],
-    effect:[{freqs:[1046.50,1318.51],type:'triangle',duration:0.15,vol:0.06}],
-    camera:[{freqs:[440.00,554.37,659.25],type:'sine',duration:0.25,vol:0.1}],
-    tick:[{freqs:[784],type:'sine',duration:0.05,vol:0.01}],
-    button:[{freqs:[440,554.37],type:'triangle',duration:0.2,vol:0.1}],
-    correct:[{freqs:[1046.50,1318.51,1567.98],type:'sine',duration:0.5,vol:0.2}],
-    wrong:[{freqs:[220,174.61,146.83],type:'sine',duration:0.4,vol:0.15}]
-};
-function getAudioContext(){ if(!audioCtx){ audioCtx=new (window.AudioContext||window.webkitAudioContext)(); if(window.appSystem) window.appSystem.audioContext=audioCtx; } if(audioCtx.state==='suspended') audioCtx.resume(); return audioCtx; }
-function playSound(type){
-    var now=Date.now(); if(now-lastSoundTime<soundCooldown) return; lastSoundTime=now;
-    if(!audioEnabled) return; if(type==='tick'&&isAnimatingCubes) return;
-    var arr=soundLibrary[type]; if(!arr||!arr.length) return;
-    var s=arr[Math.floor(Math.random()*arr.length)];
-    try{
-        var ctx=getAudioContext(), t=ctx.currentTime, gain=ctx.createGain(); gain.connect(ctx.destination);
-        gain.gain.setValueAtTime(0,t); gain.gain.linearRampToValueAtTime(s.vol,t+0.05); gain.gain.exponentialRampToValueAtTime(0.0001,t+s.duration);
-        s.freqs.forEach((f,i)=>{ var o=ctx.createOscillator(); o.type=s.type; o.frequency.setValueAtTime(f,t+i*0.03); o.connect(gain); o.start(t+i*0.03); o.stop(t+s.duration); });
-    }catch(e){}
-}
-function playNote(freq, type = 'sine', duration = 0.2, vol = 0.1) {
-    try {
-        const ctx = getAudioContext();
-        const osc = ctx.createOscillator();
-        const g = ctx.createGain();
-        osc.type = type;
-        osc.frequency.setValueAtTime(freq, ctx.currentTime);
-        g.gain.setValueAtTime(vol, ctx.currentTime);
-        g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + duration);
-        osc.connect(g); g.connect(ctx.destination);
-        osc.start(); osc.stop(ctx.currentTime + duration);
-    } catch(e) {}
-}
-function playWinSound() {
-    const notes = [659, 784, 880, 1047, 1175, 1047, 880, 784, 659, 784, 880, 1047];
-    notes.forEach((n, i) => {
-        const delay = i * 120;
-        setTimeout(() => playNote(n, 'square', 0.2, 0.2), delay);
-        setTimeout(() => playNote(n * 1.5, 'sine', 0.3, 0.15), delay + 50);
-    });
-}
-const sounds = {
-    modelChange:()=>{ playSound('select'); setTimeout(()=>playSound('effect'),150); },
-    move:()=>playSound('move'),
-    zoom:()=>{ playSound('zoom'); setTimeout(()=>playSound('effect'),80); },
-    select:()=>playSound('select'),
-    effect:()=>playSound('effect'),
-    camera:()=>playSound('camera'),
-    tick:()=>playSound('tick'),
-    button:()=>playSound('button'),
-    correct:()=>playSound('correct'),
-    wrong:()=>playSound('wrong')
-};
+    function playWinSound() {
+        const notes = [659, 784, 880, 1047, 1175, 1047, 880, 784, 659, 784, 880, 1047];
+        notes.forEach((n, i) => {
+            const delay = i * 120;
+            setTimeout(() => playNote(n, 'square', 0.2, 0.15), delay);
+            setTimeout(() => playNote(n * 1.5, 'sine', 0.25, 0.12), delay + 50);
+        });
+    }
 
-const childFriendlyShapes = [
-    '🦋', '❤️', '🎊', '🎶', '🎉', '🎈', '🎁', '💛', '🎀', '🌸', '💙',
-    '🌞', '🕊️', '🌺', '⭐', '💜', '🍭', '💚', '🧁', '🤍', '🧸', '🌙',
-    '🔥', '💎', '🐥', '🍬', '🐶', '💠', '🕊️', '🦜', '🌼', '🪐', '🐬',
-    '☘️', '🦅', '🌸', '🌝', '🐟', '💐', '🔮', '☃️', '🐉', '✨'
-];
+    function createSparkle(x, y) {
+        const s = document.createElement('div');
+        s.className = 'sparkle';
+        const color = sparkleColors[Math.floor(Math.random() * sparkleColors.length)];
+        s.style.background = `radial-gradient(circle, ${color} 0%, transparent 100%)`;
+        s.style.left = x + 'px';
+        s.style.top = y + 'px';
+        document.body.appendChild(s);
+        setTimeout(() => s.remove(), 800);
+    }
 
-let lastCameraEffectTime = 0;
-const CAMERA_EFFECT_INTERVAL = 200;
+    function createGlowTrail(x, y) {
+        const t = document.createElement('div');
+        t.className = 'glow-trail';
+        const color = sparkleColors[Math.floor(Math.random() * sparkleColors.length)];
+        t.style.background = `rgba(${parseInt(color.slice(1,3),16)}, ${parseInt(color.slice(3,5),16)}, ${parseInt(color.slice(5,7),16)}, 0.6)`;
+        t.style.left = x + 'px';
+        t.style.top = y + 'px';
+        document.body.appendChild(t);
+        setTimeout(() => t.remove(), 1000);
+    }
 
-function createVisualEffect(x, y, count = 15, mode = 'default') {
-    var c = document.getElementById('effects-container');
-    var isCamera = (mode === 'camera');
-    var now = Date.now();
-    if (isCamera && now - lastCameraEffectTime < CAMERA_EFFECT_INTERVAL) return;
-    if (isCamera) lastCameraEffectTime = now;
+    function spawnCelebration(x, y, count = 30) {
+        for (let i = 0; i < count; i++) {
+            const el = document.createElement('div');
+            el.className = 'emoji-particle';
+            el.innerText = emojis[Math.floor(Math.random() * emojis.length)];
+            el.style.left = x + 'px'; 
+            el.style.top = y + 'px';
+            document.body.appendChild(el);
+            
+            const angle = Math.random() * Math.PI * 2;
+            const distance = 150 + Math.random() * 300;
+            const tx = Math.cos(angle) * distance;
+            const ty = Math.sin(angle) * distance - 100;
+            const rot = Math.random() * 720 - 360;
+            
+            el.style.setProperty('--tx', tx + 'px');
+            el.style.setProperty('--ty', ty + 'px');
+            el.style.setProperty('--rot', rot + 'deg');
+            
+            setTimeout(() => el.remove(), 3000);
+        }
+    }
 
-    var effectiveCount = isCamera ? Math.min(count, 3) : count;
-
-    for (var i = 0; i < effectiveCount; i++) {
-        var p = document.createElement('div');
-        p.className = 'particle';
-        p.innerText = childFriendlyShapes[Math.floor(Math.random() * childFriendlyShapes.length)];
-
-        var startX, startY;
-        if (isCamera) {
-            startX = Math.random() * window.innerWidth;
-            startY = Math.random() * window.innerHeight * 0.7 + 100;
+    function moveCursor(x, y, instant = false) {
+        const cursor = document.getElementById('visual-cursor');
+        
+        if (instant) {
+            lastX = x; lastY = y;
+            lastValidPosition = { x, y };
         } else {
-            startX = x + (Math.random() - 0.5) * 200;
-            startY = y + (Math.random() - 0.5) * 200;
+            lastX += (x - lastX) * SMOOTHING;
+            lastY += (y - lastY) * SMOOTHING;
+            lastValidPosition = { x: lastX, y: lastY };
         }
-
-        var angle = Math.random() * Math.PI * 2;
-        var dist = 200 + Math.random() * 300;
-        var tx = Math.cos(angle) * dist;
-        var ty = - (300 + Math.random() * 200);
-
-        p.style.setProperty('--tx', tx + 'px');
-        p.style.setProperty('--ty', ty + 'px');
-        p.style.left = startX + 'px';
-        p.style.top = startY + 'px';
-        p.style.color = `hsl(${Math.random() * 360}, 100%, 65%)`;
-        p.style.fontSize = (20 + Math.random() * 40) + 'px';
-        p.style.animationDuration = (2.0 + Math.random() * 1.5) + 's';
-        p.style.animationDelay = (Math.random() * 0.3) + 's';
-
-        c.appendChild(p);
-        setTimeout(() => {
-            if (p.parentNode === c) c.removeChild(p);
-        }, 4000);
-    }
-}
-
-function addButtonPressEffect(b){ if(!b) return; b.classList.add('button-press-effect'); setTimeout(()=>b.classList.remove('button-press-effect'),300); }
-
-let cubesList=[], targetFilledCount=0, currentFilledIndices=new Set();
-function createGrid(filled,theme){
-    if(modelGroup) scene.remove(modelGroup);
-    modelGroup=new THREE.Group(); currentTheme=theme;
-    var cubeSize=0.3, gap=0.5; cubesList=[];
-    var model=exerciseData[theme], filledColor=model.color;
-    modelGroup.scale.set(targetScale,targetScale,targetScale);
-    for(var i=0;i<10;i++) for(var j=0;j<10;j++){
-        var idx=i*10+j, isFilled=idx<filled;
-        var mat=new THREE.MeshStandardMaterial({ color:isFilled?filledColor:COLOR_WHITE, roughness:0.2, metalness:0.0, emissive:0x000000, emissiveIntensity:0.0 });
-        var cube=new THREE.Mesh(new THREE.BoxGeometry(cubeSize,cubeSize,cubeSize),mat);
-        cube.position.set((i-4.5)*gap, (4.5-j)*gap, isFilled?0:-0.05);
-        var edges=new THREE.LineSegments(new THREE.EdgesGeometry(cube.geometry), new THREE.LineBasicMaterial({color:COLOR_BORDER,linewidth:1,opacity:0.7}));
-        cube.add(edges);
-        cube.userData={originalPosition:cube.position.clone(), originalColor:isFilled?filledColor:COLOR_WHITE, isFilled:isFilled, row:i, col:j, pulseOffset:Math.random()*Math.PI*2, index:idx};
-        cubesList.push(cube); modelGroup.add(cube);
-    }
-    scene.add(modelGroup);
-    currentFilledIndices.clear(); for(var idx=0;idx<filled;idx++) currentFilledIndices.add(idx);
-}
-function updateColorsFromSet(theme){
-    var model=exerciseData[theme], filledColor=model.color;
-    cubesList.forEach(cube=>{
-        var should=currentFilledIndices.has(cube.userData.index);
-        cube.userData.isFilled=should;
-        cube.material.color.setHex(should?filledColor:COLOR_WHITE);
-    });
-}
-function startColoringAnimation(targetFilled,theme){
-    if(isAnimatingCubes){ if(coloringFrameId) clearTimeout(coloringFrameId); isAnimatingCubes=false; }
-    if(currentBlinkAnimation){ clearInterval(currentBlinkAnimation); currentBlinkAnimation=null; }
-    isAnimatingCubes=true; quizOptionsEnabled=false; disableQuizOptions();
-    var model=exerciseData[theme], duration=5000;
-    targetFilledCount=targetFilled;
-    currentFilledIndices.clear();
-    var all=Array.from({length:100},(_,i)=>i), shuffled=all.sort(()=>Math.random()-0.5);
-    var targetSet=new Set(shuffled.slice(0,targetFilled)), toAdd=[];
-    for(var i=0;i<100;i++) if(targetSet.has(i)) toAdd.push(i);
-    toAdd.sort(()=>Math.random()-0.5);
-    var steps=toAdd.length; if(steps===0){ isAnimatingCubes=false; quizOptionsEnabled=true; enableQuizOptions(); return; }
-    var stepDur=duration/steps, stepIdx=0;
-    function step(){
-        if(stepIdx>=steps){
-            currentFilledIndices=new Set(targetSet); updateColorsFromSet(theme);
-            model.coloredSquares=targetFilled; model.whiteSquares=model.totalSquares-targetFilled;
-            isAnimatingCubes=false;
-            if(!model.answerSelected){ quizOptionsEnabled=true; enableQuizOptions(); }
-            createVisualEffect(window.innerWidth/2,window.innerHeight/2,10);
-            return;
+        
+        cursor.style.left = lastX + 'px';
+        cursor.style.top = lastY + 'px';
+        
+        if (!instant) {
+            playMoveSound();
+            if (Math.random() > 0.5) createSparkle(lastX, lastY);
+            if (Math.random() > 0.6) createGlowTrail(lastX, lastY);
         }
-        if(stepIdx<toAdd.length) currentFilledIndices.add(toAdd[stepIdx]);
-        updateColorsFromSet(theme);
-        model.coloredSquares=currentFilledIndices.size; model.whiteSquares=model.totalSquares-currentFilledIndices.size;
-        stepIdx++; coloringFrameId=setTimeout(step,stepDur);
+        
+        checkHover(lastX, lastY);
     }
-    step();
-}
-function updateCubeEffects(){
-    animationTime+=0.016; cubePulsePhase+=0.07; if(!modelGroup) return;
-    modelGroup.children.forEach((cube,idx)=>{
-        var d=cube.userData; if(!d) return;
-        cube.position.y=d.originalPosition.y+Math.sin(animationTime*4.5+d.row*0.5+d.col*0.3)*0.2;
-        var edges=cube.children[0]; if(edges&&edges.material) edges.material.opacity=(Math.sin(animationTime*1.8+idx*0.2)*0.3+0.7)*0.7;
-    });
-}
 
-let touchStartDistance=0, isRotating=false, isZooming=false, lastTouchX=0, lastTouchY=0;
-let isMouseDownLeft=false, lastMouseX=0, lastMouseY=0, lastMoveTime=0, lastZoomTime=0;
-let cameraStream=null, trackingActive=false, faceTrackingActive=false, lastCameraUpdate=0;
-let initialScaleOnTouch=2.0, initialTouchDistance=0;
-
-function initInteraction(){
-    var c=document.getElementById('render-area');
-    c.addEventListener('touchstart',handleTouchStart,{passive:false});
-    c.addEventListener('touchmove',handleTouchMove,{passive:false});
-    c.addEventListener('touchend',handleTouchEnd,{passive:false});
-    c.addEventListener('mousedown',e=>{ if(e.button===0){ isMouseDownLeft=true; isRotating=true; lastMouseX=e.clientX; lastMouseY=e.clientY; createVisualEffect(e.clientX,e.clientY,8,'mouse'); sounds.move(); } e.preventDefault(); });
-    c.addEventListener('mousemove',e=>{ if(isMouseDownLeft&&isRotating&&!isAnimatingCubes){ var dx=e.clientX-lastMouseX, dy=e.clientY-lastMouseY; targetRotY+=dx*CONTROL_SETTINGS.ROTATION.MOUSE_SPEED; targetRotX+=dy*CONTROL_SETTINGS.ROTATION.MOUSE_SPEED; var n=Date.now(); if(n-lastMoveTime>200){ sounds.move(); createVisualEffect(e.clientX,e.clientY,2,'mouse'); lastMoveTime=n; } lastMouseX=e.clientX; lastMouseY=e.clientY; } e.preventDefault(); });
-    c.addEventListener('mouseup',e=>{ if(e.button===0){ isMouseDownLeft=false; isRotating=false; } e.preventDefault(); });
-    c.addEventListener('wheel',e=>{ e.preventDefault(); targetScale+=e.deltaY*CONTROL_SETTINGS.ZOOM.MOUSE_SPEED; targetScale=Math.max(CONTROL_SETTINGS.ZOOM.MIN,Math.min(CONTROL_SETTINGS.ZOOM.MAX,targetScale)); if(modelGroup) modelGroup.scale.set(targetScale,targetScale,targetScale); var n=Date.now(); if(n-lastZoomTime>200&&!isAnimatingCubes){ sounds.zoom(); createVisualEffect(e.clientX,e.clientY,4,'mouse'); lastZoomTime=n; } });
-    c.addEventListener('contextmenu',e=>e.preventDefault());
-}
-function handleTouchStart(e){
-    createVisualEffect(e.touches[0].clientX,e.touches[0].clientY,8,'touch'); sounds.move();
-    if(e.touches.length===1){ isRotating=true; lastTouchX=e.touches[0].clientX; lastTouchY=e.touches[0].clientY; }
-    else if(e.touches.length===2){ isZooming=true; var dx=e.touches[0].clientX-e.touches[1].clientX, dy=e.touches[0].clientY-e.touches[1].clientY; initialTouchDistance=Math.sqrt(dx*dx+dy*dy); initialScaleOnTouch=targetScale; }
-    e.preventDefault();
-}
-function handleTouchMove(e){
-    if(e.touches.length===1&&isRotating&&!isAnimatingCubes){
-        var t=e.touches[0], dx=t.clientX-lastTouchX, dy=t.clientY-lastTouchY;
-        targetRotY+=dx*CONTROL_SETTINGS.ROTATION.TOUCH_SPEED; targetRotX+=dy*CONTROL_SETTINGS.ROTATION.TOUCH_SPEED;
-        var n=Date.now(); if(n-lastMoveTime>200){ sounds.move(); createVisualEffect(t.clientX,t.clientY,3,'touch'); lastMoveTime=n; }
-        lastTouchX=t.clientX; lastTouchY=t.clientY;
-    } else if(e.touches.length===2&&isZooming&&!isAnimatingCubes){
-        var dx=e.touches[0].clientX-e.touches[1].clientX, dy=e.touches[0].clientY-e.touches[1].clientY, cd=Math.sqrt(dx*dx+dy*dy);
-        if(initialTouchDistance>0){
-            var sf=cd/initialTouchDistance; targetScale+=(sf-1)*CONTROL_SETTINGS.ZOOM.TOUCH_SPEED;
-            targetScale=Math.max(CONTROL_SETTINGS.ZOOM.MIN,Math.min(CONTROL_SETTINGS.ZOOM.MAX,targetScale));
-            if(modelGroup) modelGroup.scale.set(targetScale,targetScale,targetScale);
-            var n=Date.now(); if(Math.abs(sf-1)>0.01&&n-lastZoomTime>150){ sounds.zoom(); var mx=(e.touches[0].clientX+e.touches[1].clientX)/2, my=(e.touches[0].clientY+e.touches[1].clientY)/2; createVisualEffect(mx,my,4,'touch'); lastZoomTime=n; }
-        }
-    }
-    e.preventDefault();
-}
-function handleTouchEnd(e){
-    if(e.touches.length<2){ isZooming=false; initialTouchDistance=0; }
-    if(e.touches.length===0) isRotating=false;
-    e.preventDefault();
-}
-
-const MIN_COUNT_FOR_ZOOM = 20;
-const MAX_COUNT_FOR_ZOOM = 60;
-
-async function startCamera(){
-    try{
-        cameraStream=await navigator.mediaDevices.getUserMedia({video:{facingMode:'user',width:{ideal:320},height:{ideal:240}}});
-        if(window.appSystem) window.appSystem.cameraStream=cameraStream;
-        var v=document.getElementById('camera-preview'); v.srcObject=cameraStream;
-        v.onloadedmetadata=()=>{ v.play(); startFaceTracking(); };
-        document.getElementById('camera-panel').classList.add('active'); sounds.camera();
-        setTimeout(()=>{ var r=document.getElementById('camera-panel').getBoundingClientRect(); createVisualEffect(r.left+r.width/2,r.top+r.height/2,12,'camera'); },300);
-    }catch(e){
-        document.getElementById('camera-panel').innerHTML='<div style="color:white;text-align:center;padding:15px;font-size:16px;background:#600;display:flex;align-items:center;justify-content:center;height:100%;border-radius:10px;">⚠️ الكاميرا غير متاحة<br>استخدم اللمس أو الماوس</div>';
-        document.getElementById('camera-panel').classList.add('active');
-    }
-}
-function startFaceTracking(){
-    if(trackingActive) return; trackingActive=true; faceTrackingActive=true;
-    var v=document.getElementById('camera-preview'), can=document.createElement('canvas'), ctx=can.getContext('2d');
-    function track(){
-        if(!trackingActive||!faceTrackingActive||isAnimatingCubes){ requestAnimationFrame(frame); return; }
-        var now=Date.now(); if(now-lastCameraUpdate<CONTROL_SETTINGS.CAMERA.UPDATE_RATE){ requestAnimationFrame(frame); return; } lastCameraUpdate=now;
-        if(v.readyState===v.HAVE_ENOUGH_DATA){
-            can.width=v.videoWidth; can.height=v.videoHeight; ctx.drawImage(v,0,0,can.width,can.height);
-            var id=ctx.getImageData(0,0,can.width,can.height), data=id.data;
-            var totalX=0, totalY=0, count=0;
-            for(var y=0;y<can.height;y+=4) for(var x=0;x<can.width;x+=4){
-                var idx=(y*can.width+x)*4, r=data[idx], g=data[idx+1], b=data[idx+2];
-                if(r>120&&g>60&&g<200&&b>30&&b<160&&r>g&&r>b&&Math.abs(r-g)>15){ totalX+=x; totalY+=y; count++; }
-            }
-            if(count>CONTROL_SETTINGS.CAMERA.OPEN_HAND_THRESHOLD){
-                var avgX=totalX/count, avgY=totalY/count;
-                var normX=(avgX/can.width-0.5)*2, normY=(avgY/can.height-0.5)*2;
-                targetCameraRotY = normX * Math.PI * rotationSensitivityY;
-                targetCameraRotX = normY * Math.PI * rotationSensitivityX;
-                var t = (count - MIN_COUNT_FOR_ZOOM) / (MAX_COUNT_FOR_ZOOM - MIN_COUNT_FOR_ZOOM);
-                t = Math.max(0, Math.min(1, t));
-                targetCameraZoom = zoomMax - (zoomMax - zoomMin) * t;
-                if (Date.now() - lastCameraEffectTime > CAMERA_EFFECT_INTERVAL) {
-                    createVisualEffect(0, 0, 2, 'camera');
-                    lastCameraEffectTime = Date.now();
+    function checkHover(x, y) {
+        if (!currentGroup) return;
+        
+        const elements = document.elementsFromPoint(x, y);
+        const box = elements.find(el => el.classList && el.classList.contains('shape-box') && el.classList.contains('white') && !el.classList.contains('selected'));
+        
+        if (box) {
+            if (hoverTarget !== box) {
+                clearHoverRing();
+                hoverTarget = box;
+                hoverStartTime = Date.now();
+                
+                if (currentMode === 'camera') {
+                    let ring = box.querySelector('.wait-ring');
+                    if (!ring) {
+                        ring = document.createElement('div');
+                        ring.className = 'wait-ring';
+                        box.appendChild(ring);
+                    }
                 }
             }
+            
+            if (currentMode === 'camera') {
+                const elapsed = Date.now() - hoverStartTime;
+                const progress = Math.min((elapsed / DWELL_TIME) * 100, 100);
+                
+                let ring = box.querySelector('.wait-ring');
+                if (ring) {
+                    ring.style.clipPath = `inset(${100 - progress}% 0 0 0)`;
+                }
+                
+                if (elapsed >= DWELL_TIME) {
+                    selectBox(box);
+                    clearHoverRing();
+                    hoverTarget = null;
+                }
+            }
+        } else {
+            clearHoverRing();
+            hoverTarget = null;
         }
-        requestAnimationFrame(frame);
     }
-    function frame(){ track(); }
-    requestAnimationFrame(frame);
-}
-function stopCamera(){
-    trackingActive=false; faceTrackingActive=false; if(cameraStream){ cameraStream.getTracks().forEach(t=>t.stop()); cameraStream=null; }
-    document.getElementById('camera-panel').classList.remove('active');
-}
 
-function selectShape(shape){ setModel(shape,true); }
-function setModel(model,skipNumberUpdate){
-    currentTheme=model;
-    document.querySelectorAll('.model-btn').forEach(b=>b.classList.remove('active'));
-    var activeBtn=document.getElementById('btn-'+model); activeBtn.classList.add('active');
-    var color=exerciseData[model].color; ambientLight.color.setHex(color);
-    var panelColor=model==='A'?'#FFFF00':model==='B'?'#0077FF':'#00FF00';
-    document.documentElement.style.setProperty('--panel-color',panelColor);
-    document.querySelectorAll('.shape-info-panel').forEach(p=>p.classList.remove('active-panel'));
-    document.getElementById('shape-panel-'+model.toLowerCase()).classList.add('active-panel');
-    updateQuizTitle(model); updateOptions(model);
-    var data=exerciseData[model]; clearQuizMarks();
-    if(!skipNumberUpdate){
-        if(data.answerSelected){ showNumbers(model); createGrid(data.filledSquares,model); }
-        else{ hideNumbers(model); createGrid(0,model); }
-    } else {
-        if(data.answerSelected) createGrid(data.filledSquares,model);
-        else createGrid(0,model);
+    function clearHoverRing() {
+        if (hoverTarget) {
+            const ring = hoverTarget.querySelector('.wait-ring');
+            if (ring) ring.remove();
+        }
+        hoverTarget = null;
     }
-    sounds.modelChange(); createVisualEffect(window.innerWidth/2,window.innerHeight/2,20,currentMode);
-}
-function setMode(mode){
-    currentMode=mode;
-    document.querySelectorAll('.mode-btn').forEach(b=>b.classList.remove('active'));
-    document.getElementById('btn-'+mode).classList.add('active');
-    if(mode==='camera'){
-        document.getElementById('instructions').innerHTML='✋ دوران / ✋ حركة أفقية : ⬆️ تقريب ⬇️ تبعيد / اللمس 👆 / الماوس 🖱️';
-        startCamera(); sounds.select();
-    } else {
-        stopCamera();
-        document.getElementById('instructions').innerHTML=mode==='touch'?'👆 إصبع واحد للدوران | 👆👆 إصبعين للتقريب والتبعيد':'🖱️ زر الأيسر: الدوران | عجلة الماوس: التقريب والتبعيد';
-        sounds.select();
+
+    function setMode(mode) {
+        currentMode = mode;
+        
+        document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
+        document.getElementById('btn-' + mode).classList.add('active');
+        
+        if (mode !== 'camera') {
+            stopCamera();
+        } else {
+            startCamera();
+        }
+        
+        const instructions = {
+            'touch': `👆 المس المربعات البيضاء لاختيارها`,
+            'mouse': `🖱️ حرك المؤشر فوق المربعات وانقر مرتين لتحديدها`,
+            'camera': `📷 حرك يدك أمام الكاميرا للتحكم بالمؤشر`
+        };
+        document.getElementById('instructions').textContent = instructions[mode];
+        
+        updateControlLabelColor();
+        
+        const cursor = document.getElementById('visual-cursor');
+        cursor.style.display = 'block';
     }
-    createVisualEffect(window.innerWidth/2,window.innerHeight/2,15,mode);
-}
-function startExercise(shape,ev){
-    if(ev) ev.stopPropagation(); if(shape!==currentTheme) return;
-    var data=exerciseData[shape]; data.started=true; data.answerSelected=false; data.coloredSquares=0; data.whiteSquares=100;
-    quizLocked=false; quizOptionsEnabled=false; disableQuizOptions();
-    targetScale=2.0; targetRotX=0.2; targetRotY=0.5; if(modelGroup) modelGroup.scale.set(targetScale,targetScale,targetScale);
-    hideNumbers(shape); updateShapePanel(shape);
-    if(shape===currentTheme){ clearQuizMarks(); if(!modelGroup) createGrid(0,shape); else{ currentFilledIndices.clear(); updateColorsFromSet(shape); } }
-    startColoringAnimation(data.filledSquares,shape);
-    if(ev?.target) addButtonPressEffect(ev.target); sounds.button();
-    if(ev) createVisualEffect(ev.clientX,ev.clientY,12,'touch');
-}
-function resetExercise(shape,ev){
-    if(ev) ev.stopPropagation(); if(shape!==currentTheme) return;
-    var data=exerciseData[shape]; data.started=false; data.answerSelected=false; data.coloredSquares=0; data.whiteSquares=100;
-    quizLocked=false; quizOptionsEnabled=false; disableQuizOptions();
-    if(currentBlinkAnimation){ clearInterval(currentBlinkAnimation); currentBlinkAnimation=null; }
-    if(isAnimatingCubes){ if(coloringFrameId) clearTimeout(coloringFrameId); isAnimatingCubes=false; }
-    hideNumbers(shape); updateShapePanel(shape);
-    if(shape===currentTheme){ clearQuizMarks(); currentFilledIndices.clear(); updateColorsFromSet(shape); }
-    if(ev?.target) addButtonPressEffect(ev.target); sounds.button();
-    if(ev) createVisualEffect(ev.clientX,ev.clientY,15,'touch');
-}
-function hideNumbers(s){
-    document.getElementById('shape-panel-'+s.toLowerCase()).classList.add('hidden-numbers');
-    document.getElementById('percentage-'+s.toLowerCase()).textContent='';
-    document.getElementById('colored-'+s.toLowerCase()).textContent='';
-    document.getElementById('white-'+s.toLowerCase()).textContent='';
-    document.getElementById('total-'+s.toLowerCase()).textContent='';
-}
-function showNumbers(s){
-    document.getElementById('shape-panel-'+s.toLowerCase()).classList.remove('hidden-numbers');
-    var d=exerciseData[s];
-    document.getElementById('percentage-'+s.toLowerCase()).textContent=d.percentage+'%';
-    document.getElementById('colored-'+s.toLowerCase()).textContent=d.coloredSquares;
-    document.getElementById('white-'+s.toLowerCase()).textContent=d.whiteSquares;
-    document.getElementById('total-'+s.toLowerCase()).textContent=d.totalSquares;
-}
-function updateShapePanel(s){ var d=exerciseData[s]; if(!d.answerSelected&&!d.started) hideNumbers(s); }
-function updateQuizTitle(m){ var t=document.getElementById('quiz-title'); t.textContent=exerciseData[m].name; t.dataset.shape=m; }
-function updateOptions(m){ var o=exerciseData[m].options; for(var i=1;i<=3;i++) document.getElementById('option-'+i).textContent=o[i-1]+'%'; }
-function clearQuizMarks(){ for(var i=1;i<=3;i++){ document.getElementById('emoji-'+i).textContent=''; var b=document.getElementById('option-'+i+'-btn'); b.classList.remove('correct','wrong'); b.style.pointerEvents='auto'; } }
-function enableQuizOptions(){ for(var i=1;i<=3;i++) document.getElementById('option-'+i+'-btn').style.pointerEvents='auto'; }
-function disableQuizOptions(){ for(var i=1;i<=3;i++) document.getElementById('option-'+i+'-btn').style.pointerEvents='none'; }
-function checkAnswer(n){
-    if(quizLocked||!quizOptionsEnabled||isAnimatingCubes) return;
-    var data=exerciseData[currentTheme]; if(!data.started||data.answerSelected) return;
-    quizLocked=true; data.answerSelected=true; data.started=false; quizOptionsEnabled=false;
-    var correct=data.correctPosition, quizPanel=document.getElementById('quiz-panel');
-    var btn=document.getElementById('option-'+n+'-btn'); if(btn) addButtonPressEffect(btn);
-    showNumbers(currentTheme);
-    if(n===correct){
-        sounds.correct(); quizPanel.classList.add('flash-green'); setTimeout(()=>quizPanel.classList.remove('flash-green'),1000);
-        document.getElementById('option-'+correct+'-btn').classList.add('correct');
-        document.getElementById('emoji-'+correct).textContent='✅';
-        document.getElementById('celebration-message').style.display='block';
+
+    function updateControlLabelColor() {
+        const label = document.getElementById('control-mode-label');
+        if (currentMode === 'touch') {
+            label.style.color = '#00ffcc';
+        } else if (currentMode === 'mouse') {
+            label.style.color = '#ffffff';
+        } else if (currentMode === 'camera') {
+            label.style.color = '#ff0';
+        }
+    }
+
+    async function startCamera() {
+        document.getElementById('camera-wrapper').style.display = 'block';
+        try {
+            fixCameraForAll();
+            
+            cameraStream = await navigator.mediaDevices.getUserMedia({
+                video: { 
+                    facingMode: 'user',
+                    width: { ideal: 320 },
+                    height: { ideal: 240 }
+                }
+            });
+            
+            const video = document.getElementById('camera-feed');
+            video.srcObject = cameraStream;
+            
+            video.onloadedmetadata = () => {
+                video.play();
+                startColorTracking();
+            };
+        } catch (err) {
+            document.getElementById('camera-wrapper').innerHTML = 
+                "<div style='color:white; text-align:center; padding:15px; font-size:16px; background:#600;'>⚠️ الكاميرا لا تعمل بدون اتصال بالإنترنت<br>استخدم اللمس أو الماوس</div>";
+        }
+    }
+
+    function stopCamera() {
+        trackingActive = false;
+        if (cameraStream) {
+            cameraStream.getTracks().forEach(track => track.stop());
+            cameraStream = null;
+        }
+        document.getElementById('camera-wrapper').style.display = 'none';
+    }
+
+    function startColorTracking() {
+        if (!cameraStream) return;
+        
+        trackingActive = true;
+        const video = document.getElementById('camera-feed');
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d', { willReadFrequently: true });
+        canvas.width = 160;
+        canvas.height = 120;
+        
+        function track() {
+            if (!trackingActive || currentMode !== 'camera') return;
+            
+            try {
+                ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+                const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                const data = imageData.data;
+                
+                let sumX = 0, sumY = 0, count = 0;
+                
+                for (let y = 0; y < canvas.height; y += 3) {
+                    for (let x = 0; x < canvas.width; x += 3) {
+                        const i = (y * canvas.width + x) * 4;
+                        const r = data[i], g = data[i+1], b = data[i+2];
+                        
+                        if (isSkinColor(r, g, b)) {
+                            sumX += x;
+                            sumY += y;
+                            count++;
+                        }
+                    }
+                }
+                
+                if (count > 30) {
+                    const avgX = sumX / count;
+                    const avgY = sumY / count;
+                    
+                    const screenX = (1 - avgX / canvas.width) * window.innerWidth;
+                    const screenY = (avgY / canvas.height) * window.innerHeight;
+                    
+                    moveCursor(screenX, screenY);
+                    lastValidPosition = { x: screenX, y: screenY };
+                } else {
+                    moveCursor(lastValidPosition.x, lastValidPosition.y, true);
+                }
+            } catch(e) {}
+            
+            if (trackingActive) {
+                requestAnimationFrame(track);
+            }
+        }
+        
+        track();
+    }
+
+    function isSkinColor(r, g, b) {
+        const max = Math.max(r, g, b);
+        const min = Math.min(r, g, b);
+        
+        return r > 95 && g > 40 && b > 20 &&
+               r > g && r > b &&
+               (max - min) > 15 &&
+               Math.abs(r - g) > 15;
+    }
+
+    let lastClickTime = 0;
+    
+    document.addEventListener('touchstart', (e) => {
+        if (currentMode !== 'touch') return;
+        const touch = e.touches[0];
+        moveCursor(touch.clientX, touch.clientY, true);
+        
+        const now = Date.now();
+        if (now - lastClickTime < 300) {
+            const elements = document.elementsFromPoint(touch.clientX, touch.clientY);
+            const box = elements.find(el => el.classList && el.classList.contains('shape-box'));
+            if (box && box.classList.contains('white') && !box.classList.contains('selected')) {
+                selectBox(box);
+            }
+        }
+        lastClickTime = now;
+    }, { passive: true });
+
+    document.addEventListener('touchmove', (e) => {
+        if (currentMode !== 'touch') return;
+        const touch = e.touches[0];
+        moveCursor(touch.clientX, touch.clientY);
+    }, { passive: true });
+
+    document.addEventListener('mousemove', (e) => {
+        if (currentMode !== 'mouse') return;
+        moveCursor(e.clientX, e.clientY);
+    });
+
+    document.addEventListener('click', (e) => {
+        if (currentMode !== 'mouse') return;
+        const now = Date.now();
+        if (now - lastClickTime < 300) {
+            const elements = document.elementsFromPoint(e.clientX, e.clientY);
+            const box = elements.find(el => el.classList && el.classList.contains('shape-box'));
+            if (box && box.classList.contains('white') && !box.classList.contains('selected')) {
+                selectBox(box);
+            }
+        }
+        lastClickTime = now;
+    });
+
+    let currentGroup = null;
+
+    function init() {
+        renderCards();
+        startEx('A', true);
+        
+        const cursor = document.getElementById('visual-cursor');
+        cursor.style.left = (window.innerWidth / 2) + 'px';
+        cursor.style.top = (window.innerHeight / 2) + 'px';
+        cursor.style.display = 'block';
+        lastValidPosition = { x: window.innerWidth / 2, y: window.innerHeight / 2 };
+
+        setMode('touch');
+        updateControlLabelColor();
+        updateStatsConstants();
+        
+        window.addEventListener('resize', () => {
+            if (currentGroup) {
+                buildShapes(currentModel);
+            }
+        });
+    }
+
+    function setModel(model) {
+        currentModel = model;
+        document.querySelectorAll('.model-btn').forEach(b => b.classList.remove('active'));
+        document.getElementById('btn-model-' + model).classList.add('active');
+        
+        document.getElementById('current-model-name').innerText = models[model].name;
+        
+        document.getElementById('colored-text').innerHTML = `عدد المربعات ${models[model].emoji} : `;
+        
+        document.querySelectorAll('.exercise-card').forEach(c => c.classList.remove('active'));
+        document.getElementById('card-' + model).classList.add('active');
+        
+        startEx(model, true);
+        
+        updateStatsConstants();
+    }
+
+    function updateUI() {
+        const model = models[currentModel];
+        
+        document.getElementById('val-total').innerText = model.total;
+        
+        const display = document.getElementById('math-display');
+        
+        if (model.solved === 0) {
+            display.innerHTML = `
+                <div style="text-align: center; color: #aaa; padding: 25px 12px;">
+                    <div style="font-size: 18px; margin-bottom: 10px;">👈</div>
+                    <div style="font-size: 14px;">اختر مربعًا أبيض لبدء الحساب</div>
+                    <div style="font-size: 11px; margin-top: 6px; color: #888;">سوف تظهر هنا العملية الحسابية بالتفصيل</div>
+                </div>
+            `;
+            return;
+        }
+        
+        const step1_n = model.solved;
+        const step1_d = model.total;
+        
+        const step2_n = model.solved / model.div;
+        const step2_d = model.total / model.div;
+        
+        const step3_n = step2_n * model.mult;
+        const step3_d = step2_d * model.mult;
+        
+        const finalResult = Math.round((model.solved / model.total) * 100);
+        
+        const formatNumber = (num) => {
+            return parseFloat(num.toFixed(2));
+        };
+        
+        display.innerHTML = `
+            <div class="math-row">
+                <div class="math-box" style="border: 2px solid #2ecc71;">
+                    <div class="step-number">1</div>
+                    <div class="box-text-stack">
+                        <span class="box-text">البسط هو عدد المربعات البيضاء</span>
+                        <span class="box-text">المقام هو عدد المربعات الكلي</span>
+                    </div>
+                    <div class="fraction-container">
+                        <div class="fraction"><span class="num">${step1_n}</span><span class="den">${step1_d}</span></div>
+                    </div>
+                </div>
+
+                <div class="arrow">←</div>
+
+                <div class="math-box" style="border: 2px solid #9b59b6;">
+                    <div class="step-number">2</div>
+                    <div class="box-text-stack">
+                        <span class="box-text">نقسم البسط والمقام</span>
+                        <span class="box-text">على الرقم ( ${model.div} ) فتصبح : </span>
+                    </div>
+                    <div class="fraction-container">
+                        <div class="fraction"><span class="num">${formatNumber(step2_n)}</span><span class="den">${formatNumber(step2_d)}</span></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="math-row">
+                <div class="math-box" style="border: 2px solid #e74c3c;">
+                    <div class="step-number">3</div>
+                    <div class="box-text-stack">
+                        <span class="box-text">ثم نضرب البسط والمقام</span>
+                        <span class="box-text">بالرقم ( 10 ) فيصبح : </span>
+                    </div>
+                    <div class="fraction-container">
+                        <div class="fraction"><span class="num">${formatNumber(step3_n)}</span><span class="den">${formatNumber(step3_d)}</span></div>
+                    </div>
+                </div>
+
+                <div class="arrow">←</div>
+
+                <div class="math-box" style="border: 2px solid #f39c12;">
+                    <div class="step-number">4</div>
+                    <div class="box-text-stack">
+                        <span class="box-text">نقسم البسط على المقام</span>
+                        <span class="box-text">فيصبح الناتج النهائي : </span>
+                    </div>
+                    <div class="result-final">${finalResult} %</div>
+                </div>
+            </div>`;
+    }
+
+    function updateStatsConstants() {
+        const model = models[currentModel];
+        document.getElementById('val-white-total').innerText = model.white;
+        document.getElementById('val-colored-total').innerText = model.colored;
+    }
+
+    function renderCards() {
+        const container = document.getElementById('cards-container');
+        container.innerHTML = '';
+        
+        Object.keys(models).forEach(id => {
+            const isActive = id === currentModel;
+            const model = models[id];
+            const pct = Math.round((model.solved / model.total) * 100);
+            
+            const card = document.createElement('div');
+            card.className = `exercise-card ${isActive?'active':''}`;
+            card.id = `card-${id}`;
+            
+            card.innerHTML = `
+                <div class="model-name">${model.name}</div>
+                <div class="progress-container">
+                    <div class="progress-wrapper-vertical">
+                        <div id="bar-${id}" class="progress-bar-vertical" style="background:${model.color}; height:${pct}%"></div>
+                    </div>
+                    <div class="pct-label" id="txt-${id}">${pct} %</div>
+                </div>
+                <div class="buttons-container">
+                    <div class="top-buttons">
+                        <button class="btn-action btn-start">ابدأ</button>
+                        <button class="btn-action btn-resume" id="res-${id}" style="${model.solved > 0 && model.solved < model.white ? 'display:inline-block' : 'display:none'}">استئناف</button>
+                    </div>
+                    <button class="btn-action btn-reset">إعادة ضبط</button>
+                </div>
+            `;
+            
+            container.appendChild(card);
+            
+            const btnStart = card.querySelector('.btn-start');
+            const btnResume = card.querySelector('.btn-resume');
+            const btnReset = card.querySelector('.btn-reset');
+            
+            btnStart.onclick = e => {
+                e.stopPropagation();
+                setModel(id);
+                startEx(id, false);
+            };
+            
+            btnResume.onclick = e => {
+                e.stopPropagation();
+                setModel(id);
+                startEx(id, true);
+            };
+            
+            btnReset.onclick = e => {
+                e.stopPropagation();
+                resetEx(id);
+            };
+            
+            card.onclick = () => {
+                if (currentModel !== id) {
+                    setModel(id);
+                }
+            };
+        });
+    }
+
+    function startEx(id, resume) {
+        currentModel = id;
+        currentGroup = models[id];
+        
+        if (!resume) {
+            models[id].solved = 0;
+            models[id].selections = [];
+        }
+        
+        updateProgressBar(id);
+        updateUI();
+        
+        buildShapes(id);
+        
+        document.getElementById('res-'+id).style.display = 'none';
+        
+        Object.keys(models).forEach(otherId => {
+            if (otherId !== id && models[otherId].solved > 0 && models[otherId].solved < models[otherId].white) {
+                document.getElementById('res-'+otherId).style.display = 'inline-block';
+            }
+        });
+    }
+
+    function checkPattern(id, r, c) {
+        if (id === 'A') {
+            return (c < 2 || c > 7);
+        } else if (id === 'B') {
+            return (c < 2 || c > 7);
+        } else if (id === 'C') {
+            return !((r>=1 && r<=3 && c>=1 && c<=2) || (r>=6 && r<=8 && c>=1 && c<=2));
+        }
+        return false;
+    }
+
+    function buildShapes(id) {
+        const grid = document.getElementById('shapes-grid');
+        grid.innerHTML = '';
+        
+        const model = models[id];
+        const rows = model.rows;
+        const cols = model.cols;
+        
+        grid.style.gridTemplateColumns = `repeat(${cols}, 1fr)`;
+        grid.style.gridTemplateRows = `repeat(${rows}, 1fr)`;
+        
+        for (let r = 0; r < rows; r++) {
+            for (let c = 0; c < cols; c++) {
+                const idx = r * cols + c;
+                const isWhite = checkPattern(id, r, c);
+                const isSelected = model.selections.includes(idx);
+                
+                const box = document.createElement('div');
+                box.className = `shape-box ${isWhite ? 'white' : 'colored'} ${isSelected ? 'selected' : ''}`;
+                box.dataset.id = idx;
+                box.dataset.row = r;
+                box.dataset.col = c;
+                
+                if (isSelected) {
+                    const order = model.selections.indexOf(idx) + 1;
+                    box.textContent = order;
+                    box.style.backgroundColor = 'black';
+                    box.style.color = 'white';
+                } else if (isWhite) {
+                    box.style.backgroundColor = 'white';
+                } else {
+                    box.style.backgroundColor = model.color;
+                }
+                
+                box.addEventListener('click', () => {
+                    if (currentMode === 'touch' || currentMode === 'mouse') {
+                        handleBoxClick(box);
+                    }
+                });
+                
+                grid.appendChild(box);
+            }
+        }
+        
+        grid.style.margin = 'auto';
+    }
+
+    function handleBoxClick(box) {
+        if (!box.classList.contains('white') || box.classList.contains('selected')) return;
+        
+        const model = models[currentModel];
+        const id = parseInt(box.dataset.id);
+        
+        if (model.selections.includes(id)) return;
+        
+        box.classList.add('selected');
+        const order = model.selections.length + 1;
+        box.textContent = order;
+        box.style.backgroundColor = 'black';
+        box.style.color = 'white';
+        
+        model.solved++;
+        model.selections.push(id);
+        
+        playSuccessSound();
+        const rect = box.getBoundingClientRect();
+        const x = rect.left + rect.width / 2;
+        const y = rect.top + rect.height / 2;
+        spawnCelebration(x, y, 15);
+        
+        updateUI();
+        updateProgressBar(currentModel);
+
+        if (model.solved === model.white) {
+            triggerCelebration();
+        }
+        
+        if (model.solved > 0 && model.solved < model.white) {
+            document.getElementById('res-'+currentModel).style.display = 'inline-block';
+        }
+    }
+
+    function selectBox(box) {
+        if (!box.classList.contains('white') || box.classList.contains('selected')) return;
+        
+        const model = models[currentModel];
+        const id = parseInt(box.dataset.id);
+        
+        if (model.selections.includes(id)) return;
+        
+        box.classList.add('selected');
+        const order = model.selections.length + 1;
+        box.textContent = order;
+        box.style.backgroundColor = 'black';
+        box.style.color = 'white';
+        
+        model.solved++;
+        model.selections.push(id);
+        
+        playSuccessSound();
+        const rect = box.getBoundingClientRect();
+        const x = rect.left + rect.width / 2;
+        const y = rect.top + rect.height / 2;
+        spawnCelebration(x, y, 15);
+        
+        updateUI();
+        updateProgressBar(currentModel);
+
+        if (model.solved === model.white) {
+            triggerCelebration();
+        }
+        
+        if (model.solved > 0 && model.solved < model.white) {
+            document.getElementById('res-'+currentModel).style.display = 'inline-block';
+        }
+    }
+
+    function updateProgressBar(id) {
+        const model = models[id];
+        const pct = Math.round((model.solved / model.total) * 100);
+        document.getElementById('bar-'+id).style.height = pct + '%';
+        document.getElementById('txt-'+id).innerText = pct + ' %';
+    }
+
+    function triggerCelebration() {
+        const modal = document.getElementById('celebration-message');
+        modal.style.display = 'block';
         playWinSound();
-        for(var i=0;i<30;i++) setTimeout(()=>createVisualEffect(Math.random()*window.innerWidth,Math.random()*window.innerHeight,3),i*50);
-        setTimeout(()=>document.getElementById('celebration-message').style.display='none',3000);
-        startColoringAnimation(data.filledSquares,currentTheme);
-        disableQuizOptions();
-    } else {
-        sounds.wrong(); quizPanel.classList.add('flash-red'); setTimeout(()=>quizPanel.classList.remove('flash-red'),1000);
-        document.getElementById('option-'+n+'-btn').classList.add('wrong');
-        document.getElementById('emoji-'+n).textContent='❌';
-        startColoringAnimation(data.options[n-1],currentTheme);
-        disableQuizOptions();
+        spawnCelebration(window.innerWidth/2, window.innerHeight/2, 60);
+        
+        setTimeout(() => {
+            modal.style.display = 'none';
+        }, 3000);
     }
-}
 
-function init(){
-    audioEnabled=true;
-    document.addEventListener('click',()=>{ if(!audioCtx){ audioCtx=new (window.AudioContext||window.webkitAudioContext)(); if(window.appSystem) window.appSystem.audioContext=audioCtx; sounds.select(); } },{once:true});
-    document.addEventListener('touchstart',()=>{ if(!audioCtx){ audioCtx=new (window.AudioContext||window.webkitAudioContext)(); if(window.appSystem) window.appSystem.audioContext=audioCtx; sounds.select(); } },{once:true});
-    startApp();
-}
-function startApp(){
-    initThree(); initInteraction(); setMode('touch');
-    targetScale=2.0; setModel('A',false);
-    Object.keys(exerciseData).forEach(shape=>hideNumbers(shape));
-    disableQuizOptions();
-    setTimeout(()=>{ createVisualEffect(window.innerWidth/4,window.innerHeight/4,12); createVisualEffect(window.innerWidth*3/4,window.innerHeight/4,12); createVisualEffect(window.innerWidth/4,window.innerHeight*3/4,12); createVisualEffect(window.innerWidth*3/4,window.innerHeight*3/4,12); sounds.modelChange(); },1000);
-    window.addEventListener('resize',()=>{ if(camera3D&&renderer){ camera3D.aspect=window.innerWidth/window.innerHeight; camera3D.updateProjectionMatrix(); renderer.setSize(window.innerWidth,window.innerHeight); } });
-}
-function initThree(){
-    scene=new THREE.Scene(); scene.background=new THREE.Color(0x000000);
-    camera3D=new THREE.PerspectiveCamera(60,window.innerWidth/window.innerHeight,0.1,1000); camera3D.position.z=5;
-    renderer=new THREE.WebGLRenderer({canvas:document.getElementById('three-canvas'),antialias:true,alpha:false});
-    renderer.setSize(window.innerWidth,window.innerHeight); renderer.shadowMap.enabled=false;
-    ambientLight=new THREE.AmbientLight(0xffffff,2.2);
-    scene.add(ambientLight);
-    createGrid(0,'A'); animate();
-}
-function animate(){
-    requestAnimationFrame(animate);
-    if(currentMode==='camera'){
-        targetRotY+=(targetCameraRotY-targetRotY)*0.1;
-        targetRotX+=(targetCameraRotX-targetRotX)*0.1;
-        targetScale+=(targetCameraZoom-targetScale)*0.03;
-        targetScale=Math.max(zoomMin,Math.min(zoomMax,targetScale));
+    function resetEx(id) {
+        models[id].solved = 0;
+        models[id].selections = [];
+        
+        updateProgressBar(id);
+        buildShapes(id);
+        updateUI();
+        
+        document.getElementById('res-'+id).style.display = 'none';
     }
-    if(modelGroup){
-        if(!isAnimatingCubes){
-            modelGroup.rotation.y+=(targetRotY-modelGroup.rotation.y)*0.15;
-            modelGroup.rotation.x+=(targetRotX-modelGroup.rotation.x)*0.15;
-        }
-        modelGroup.scale.set(targetScale,targetScale,targetScale);
-        updateCubeEffects();
+
+    document.addEventListener('click', () => getAudioContext(), { once: true });
+    document.addEventListener('touchstart', () => getAudioContext(), { once: true });
+
+    window.onload = init;
+</script>
+
+<script>
+function fixCameraForAll() {
+    if (typeof navigator.mediaDevices === 'undefined') {
+        navigator.mediaDevices = {};
     }
-    renderer.render(scene,camera3D);
+    
+    if (typeof navigator.mediaDevices.getUserMedia === 'undefined') {
+        navigator.mediaDevices.getUserMedia = function(constraints) {
+            const legacyGetUserMedia = 
+                navigator.webkitGetUserMedia || 
+                navigator.mozGetUserMedia || 
+                navigator.msGetUserMedia;
+            
+            if (legacyGetUserMedia) {
+                return new Promise(function(resolve, reject) {
+                    legacyGetUserMedia.call(navigator, constraints, resolve, reject);
+                });
+            } else {
+                return Promise.reject(new Error('الكاميرا غير متاحة في هذا المتصفح'));
+            }
+        };
+    }
 }
-window.addEventListener('load',init);
+window.addEventListener('load', fixCameraForAll);
 </script>
 </body>
 </html>
