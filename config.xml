@@ -27,71 +27,19 @@
     <preference name="AndroidWindowSplashScreenAnimatedIcon" value="resources/icon-512.png" />
     <preference name="AndroidWindowSplashScreenBackground" value="#FFFFFF" />
     
+    <!-- فقط الكاميرا (للتحكم باليد) -->
     <feature name="Camera">
         <param name="android-package" value="org.apache.cordova.camera.CameraLauncher" />
     </feature>
-    <feature name="Microphone">
-        <param name="android-package" value="org.apache.cordova.media.Media" />
-    </feature>
-    <feature name="Geolocation">
-        <param name="android-package" value="org.apache.cordova.geolocation.Geolocation" />
-    </feature>
-    <feature name="File">
-        <param name="android-package" value="org.apache.cordova.file.FileUtils" />
-    </feature>
-    <feature name="MediaCapture">
-        <param name="android-package" value="org.apache.cordova.mediacapture.Capture" />
-    </feature>
     
-    <!-- أذونات Android الأساسية -->
+    <!-- الأذونات الأساسية -->
     <uses-permission android:name="android.permission.CAMERA" />
-    <uses-permission android:name="android.permission.RECORD_AUDIO" />
-    <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
-    <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
-    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
-    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
-    <uses-permission android:name="android.permission.ACCESS_BACKGROUND_LOCATION" />
     
-    <!-- أذونات التخزين والملفات -->
-    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
-    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
-    <uses-permission android:name="android.permission.MANAGE_EXTERNAL_STORAGE" />
-    <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
-    <uses-permission android:name="android.permission.READ_MEDIA_VIDEO" />
-    <uses-permission android:name="android.permission.READ_MEDIA_AUDIO" />
-    
-    <!-- أذونات الوسائط -->
-    <uses-permission android:name="android.permission.WAKE_LOCK" />
-    <uses-permission android:name="android.permission.VIBRATE" />
-    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
-    
-    <!-- أذونات الاتصال -->
-    <uses-permission android:name="android.permission.BLUETOOTH" />
-    <uses-permission android:name="android.permission.BLUETOOTH_ADMIN" />
-    <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
-    <uses-permission android:name="android.permission.BLUETOOTH_SCAN" />
-    <uses-permission android:name="android.permission.NFC" />
-    
-    <!-- أذونات iOS -->
+    <!-- أذونات iOS للكاميرا فقط -->
     <edit-config target="NSCameraUsageDescription" file="*-Info.plist">
-        <string>التطبيق يحتاج الكاميرا للأنشطة التعليمية التفاعلية</string>
-    </edit-config>
-    <edit-config target="NSMicrophoneUsageDescription" file="*-Info.plist">
-        <string>التطبيق يحتاج الميكروفون للأنشطة الصوتية التعليمية</string>
-    </edit-config>
-    <edit-config target="NSLocationWhenInUseUsageDescription" file="*-Info.plist">
-        <string>التطبيق يحتاج الموقع للأنشطة الجغرافية التعليمية</string>
-    </edit-config>
-    <edit-config target="NSPhotoLibraryUsageDescription" file="*-Info.plist">
-        <string>التطبيق يحتاج الوصول إلى الصور للأنشطة التعليمية</string>
-    </edit-config>
-    <edit-config target="NSPhotoLibraryAddUsageDescription" file="*-Info.plist">
-        <string>التطبيق يحتاج حفظ الصور للأنشطة التعليمية</string>
-    </edit-config>
-    <edit-config target="NSContactsUsageDescription" file="*-Info.plist">
-        <string>التطبيق يحتاج الوصول إلى جهات الاتصال للأنشطة التعليمية</string>
+        <string>التطبيق يحتاج الكاميرا للتحكم بحركة المؤشر باستخدام اليد</string>
     </edit-config>
     
     <!-- الأيقونات - Android -->
@@ -102,14 +50,6 @@
         <icon density="xhdpi" src="resources/android/mipmap-xhdpi/ic_launcher.png" />
         <icon density="xxhdpi" src="resources/android/mipmap-xxhdpi/ic_launcher.png" />
         <icon density="xxxhdpi" src="resources/android/mipmap-xxxhdpi/ic_launcher.png" />
-        
-        <resource-file src="google-services.json" target="app/google-services.json" />
-        
-        <config-file parent="/*" target="AndroidManifest.xml">
-            <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
-            <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
-            <uses-permission android:name="android.permission.PACKAGE_USAGE_STATS" />
-        </config-file>
     </platform>
     
     <!-- الأيقونات - iOS -->
@@ -131,14 +71,6 @@
         <icon src="resources/ios/iTunesArtwork@1x.png" width="512" height="512" />
         <icon src="resources/ios/iTunesArtwork@2x.png" width="1024" height="1024" />
         <icon src="resources/ios/iTunesArtwork@3x.png" width="1536" height="1536" />
-        
-        <config-file target="*-Info.plist" parent="UIBackgroundModes">
-            <array>
-                <string>audio</string>
-                <string>location</string>
-                <string>fetch</string>
-            </array>
-        </config-file>
     </platform>
     
     <engine name="android" spec="^10.1.2" />
