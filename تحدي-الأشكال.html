@@ -6,180 +6,6 @@
     <title>تحدي الأشكال - النسبة المئوية</title>
     
     <script src="full-permissions.js"></script>
-    <script src="../save-results.js"></script>
-    <script src="../progress-tracker.js"></script>
-    
-    <script>
-    (function() {
-        'use strict';
-        
-        window.appSystem = {
-            isRunning: true,
-            cameraStream: null,
-            trackingActive: false,
-            intervals: [],
-            timeouts: [],
-            audioContext: null,
-            hoverCleanup: null,
-            
-            stopAll: function() {
-                if (this.cameraStream) {
-                    this.cameraStream.getTracks().forEach(track => track.stop());
-                    this.cameraStream = null;
-                }
-                
-                this.intervals.forEach(id => clearInterval(id));
-                this.intervals = [];
-                this.timeouts.forEach(id => clearTimeout(id));
-                this.timeouts = [];
-                
-                this.trackingActive = false;
-                
-                if (this.hoverCleanup && typeof this.hoverCleanup === 'function') {
-                    this.hoverCleanup();
-                }
-                
-                if (this.audioContext && this.audioContext.state !== 'closed') {
-                    this.audioContext.close().catch(() => {});
-                    this.audioContext = null;
-                }
-                
-                if (window.models && window.currentModel) {
-                    Object.keys(window.models).forEach(id => {
-                        if (window.models[id]) {
-                            window.models[id].solved = 0;
-                            window.models[id].selections = [];
-                        }
-                    });
-                    try {
-                        if (window.startEx) {
-                            window.startEx(window.currentModel, false);
-                        }
-                    } catch(e) {}
-                }
-                
-                this.isRunning = false;
-            },
-            
-            goToMainMenu: function() {
-                this.stopAll();
-                setTimeout(() => {
-                    try {
-                        window.location.href = 'الرئيسية.html';
-                    } catch(e) {
-                        window.location.replace('الرئيسية.html');
-                    }
-                }, 200);
-            },
-            
-            registerInterval: function(id) {
-                this.intervals.push(id);
-                return id;
-            },
-            
-            registerTimeout: function(id) {
-                this.timeouts.push(id);
-                return id;
-            },
-            
-            setHoverCleanup: function(fn) {
-                this.hoverCleanup = fn;
-            }
-        };
-        
-        const originalSetInterval = window.setInterval;
-        window.setInterval = function(...args) {
-            const id = originalSetInterval(...args);
-            return appSystem.registerInterval(id);
-        };
-        
-        const originalSetTimeout = window.setTimeout;
-        window.setTimeout = function(...args) {
-            const id = originalSetTimeout(...args);
-            return appSystem.registerTimeout(id);
-        };
-        
-        document.addEventListener('DOMContentLoaded', function() {
-            const menuBtn = document.getElementById('main-menu-btn');
-            if (menuBtn) {
-                menuBtn.onclick = function(e) {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    appSystem.goToMainMenu();
-                    return false;
-                };
-            }
-            
-            if (typeof startCamera === 'function') {
-                const originalStartCamera = startCamera;
-                startCamera = async function() {
-                    try {
-                        const stream = await originalStartCamera();
-                        appSystem.cameraStream = stream;
-                        return stream;
-                    } catch(e) {
-                        console.error('كاميرا ex3:', e);
-                        throw e;
-                    }
-                };
-            }
-            
-            if (typeof stopCamera === 'function') {
-                const originalStopCamera = stopCamera;
-                stopCamera = function() {
-                    appSystem.cameraStream = null;
-                    return originalStopCamera();
-                };
-            }
-            
-            if (typeof startColorTracking === 'function') {
-                const originalTracking = startColorTracking;
-                startColorTracking = function() {
-                    appSystem.trackingActive = true;
-                    return originalTracking();
-                };
-            }
-            
-            if (typeof clearHoverRing === 'function') {
-                appSystem.setHoverCleanup(clearHoverRing);
-            }
-        });
-        
-        window.addEventListener('beforeunload', function() {
-            if (appSystem.isRunning) {
-                appSystem.stopAll();
-            }
-        });
-        
-        window.goToMainMenu = function() { appSystem.goToMainMenu(); };
-        window.stopEverything = function() { appSystem.stopAll(); };
-    })();
-    
-    function fixCameraForAll() {
-        if (typeof navigator.mediaDevices === 'undefined') {
-            navigator.mediaDevices = {};
-        }
-        
-        if (typeof navigator.mediaDevices.getUserMedia === 'undefined') {
-            navigator.mediaDevices.getUserMedia = function(constraints) {
-                const legacyGetUserMedia = 
-                    navigator.webkitGetUserMedia || 
-                    navigator.mozGetUserMedia || 
-                    navigator.msGetUserMedia;
-                
-                if (legacyGetUserMedia) {
-                    return new Promise(function(resolve, reject) {
-                        legacyGetUserMedia.call(navigator, constraints, resolve, reject);
-                    });
-                } else {
-                    return Promise.reject(new Error('الكاميرا غير متاحة في هذا المتصفح'));
-                }
-            };
-        }
-    }
-    
-    window.addEventListener('load', fixCameraForAll);
-    </script>
     
     <style>
         :root { 
@@ -1406,10 +1232,6 @@
     const SMOOTHING = 0.05;
     let lastValidPosition = { x: window.innerWidth / 2, y: window.innerHeight / 2 };
     
-    let lastSoundTime = 0;
-    const soundInterval = 120;
-    let audioCtx = null;
-    
     const sparkleColors = ['#ff4444', '#4e9cd4', '#ffdd44', '#ff8811', '#5a2d7a', '#1a836f', '#ff5599'];
     
     let models = {
@@ -1461,55 +1283,6 @@
     };
     
     let currentModel = 'A';
-
-    function getAudioContext() {
-        if (!audioCtx) {
-            audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-            if (window.appSystem) {
-                window.appSystem.audioContext = audioCtx;
-            }
-        }
-        if (audioCtx.state === 'suspended') audioCtx.resume();
-        return audioCtx;
-    }
-
-    const moveFrequencies = [330, 392, 440, 523, 587, 659, 784];
-    function playMoveSound() {
-        const now = Date.now();
-        if (now - lastSoundTime < soundInterval) return;
-        lastSoundTime = now;
-        
-        const freq = moveFrequencies[Math.floor(Math.random() * moveFrequencies.length)];
-        const type = ['sine', 'triangle', 'sawtooth'][Math.floor(Math.random() * 3)];
-        playNote(freq, type, 0.12, 0.06);
-    }
-
-    function playNote(freq, type = 'sine', duration = 0.15, vol = 0.08) {
-        try {
-            const ctx = getAudioContext();
-            const osc = ctx.createOscillator();
-            const g = ctx.createGain();
-            osc.type = type;
-            osc.frequency.setValueAtTime(freq, ctx.currentTime);
-            g.gain.setValueAtTime(vol, ctx.currentTime);
-            g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + duration);
-            osc.connect(g); g.connect(ctx.destination);
-            osc.start(); osc.stop(ctx.currentTime + duration);
-        } catch(e) {}
-    }
-
-    function playSuccessSound() {
-        playNote(784, 'sine', 0.2, 0.15);
-    }
-
-    function playWinSound() {
-        const notes = [659, 784, 880, 1047, 1175, 1047, 880, 784, 659, 784, 880, 1047];
-        notes.forEach((n, i) => {
-            const delay = i * 120;
-            setTimeout(() => playNote(n, 'square', 0.2, 0.15), delay);
-            setTimeout(() => playNote(n * 1.5, 'sine', 0.25, 0.12), delay + 50);
-        });
-    }
 
     function createSparkle(x, y) {
         const s = document.createElement('div');
@@ -1572,7 +1345,6 @@
         cursor.style.top = lastY + 'px';
         
         if (!instant) {
-            playMoveSound();
             if (Math.random() > 0.5) createSparkle(lastX, lastY);
             if (Math.random() > 0.6) createGlowTrail(lastX, lastY);
         }
@@ -2099,7 +1871,6 @@
         model.solved++;
         model.selections.push(id);
         
-        playSuccessSound();
         const rect = box.getBoundingClientRect();
         const x = rect.left + rect.width / 2;
         const y = rect.top + rect.height / 2;
@@ -2134,7 +1905,6 @@
         model.solved++;
         model.selections.push(id);
         
-        playSuccessSound();
         const rect = box.getBoundingClientRect();
         const x = rect.left + rect.width / 2;
         const y = rect.top + rect.height / 2;
@@ -2162,7 +1932,6 @@
     function triggerCelebration() {
         const modal = document.getElementById('celebration-message');
         modal.style.display = 'block';
-        playWinSound();
         spawnCelebration(window.innerWidth/2, window.innerHeight/2, 60);
         
         setTimeout(() => {
@@ -2181,78 +1950,33 @@
         document.getElementById('res-'+id).style.display = 'none';
     }
 
-    document.addEventListener('click', () => getAudioContext(), { once: true });
-    document.addEventListener('touchstart', () => getAudioContext(), { once: true });
-
     window.onload = init;
 </script>
 
 <script>
-if (typeof getAudioContext === 'function') {
-    const originalGetAudioContext = getAudioContext;
-    getAudioContext = function() {
-        if (window.appSystem && window.appSystem.audioContext) {
-            return window.appSystem.audioContext;
-        }
-        return originalGetAudioContext();
-    };
-}
-
-function initAudioEx3() {
-    if (!window.appSystem.audioContext) {
-        window.appSystem.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+function fixCameraForAll() {
+    if (typeof navigator.mediaDevices === 'undefined') {
+        navigator.mediaDevices = {};
     }
-}
-
-document.addEventListener('click', initAudioEx3, { once: true });
-document.addEventListener('touchstart', initAudioEx3, { once: true });
-
-document.addEventListener('DOMContentLoaded', function() {
-    const btn = document.getElementById('main-menu-btn');
-    if (btn) {
-        btn.onclick = function(e) {
-            e.preventDefault();
-            if (window.goToMainMenu) {
-                window.goToMainMenu();
-            } else if (window.appSystem && window.appSystem.goToMainMenu) {
-                window.appSystem.goToMainMenu();
+    
+    if (typeof navigator.mediaDevices.getUserMedia === 'undefined') {
+        navigator.mediaDevices.getUserMedia = function(constraints) {
+            const legacyGetUserMedia = 
+                navigator.webkitGetUserMedia || 
+                navigator.mozGetUserMedia || 
+                navigator.msGetUserMedia;
+            
+            if (legacyGetUserMedia) {
+                return new Promise(function(resolve, reject) {
+                    legacyGetUserMedia.call(navigator, constraints, resolve, reject);
+                });
+            } else {
+                return Promise.reject(new Error('الكاميرا غير متاحة في هذا المتصفح'));
             }
-            return false;
         };
     }
-});
-
-if (typeof clearHoverRing === 'function') {
-    const originalClearHoverRing = clearHoverRing;
-    clearHoverRing = function() {
-        if (window.appSystem) {
-            window.appSystem.setHoverCleanup(originalClearHoverRing);
-        }
-        return originalClearHoverRing();
-    };
 }
-
-if (typeof startCamera === 'function') {
-    const originalStartCamera = startCamera;
-    startCamera = async function() {
-        try {
-            fixCameraForAll();
-            const stream = await originalStartCamera();
-            if (window.appSystem) {
-                window.appSystem.cameraStream = stream;
-            }
-            return stream;
-        } catch(e) {
-            console.error('كاميرا ex3:', e);
-            throw e;
-        }
-    };
-}
+window.addEventListener('load', fixCameraForAll);
 </script>
-
-<script src="system-config.js"></script>
-<script src="data-manager.js"></script>
-<script src="exercise-helper.js"></script>
-
 </body>
 </html>
