@@ -46,12 +46,26 @@ jobs:
       - name: Build Release APK
         working-directory: ./cordova-app
         run: |
-          cordova build android --release -- --keystore=percentage-lab.keystore --storePassword=${{ secrets.KEYSTORE_PASSWORD }} --alias=${{ secrets.KEY_ALIAS }} --password=${{ secrets.KEY_PASSWORD }}
+          cordova build android --release -- \
+            --keystore=percentage-lab.keystore \
+            --storePassword=${{ secrets.KEYSTORE_PASSWORD }} \
+            --alias=${{ secrets.KEY_ALIAS }} \
+            --password=${{ secrets.KEY_PASSWORD }}
+
+      - name: Locate APK
+        id: locate-apk
+        run: |
+          if [ -f cordova-app/platforms/android/app/build/outputs/apk/release/app-release.apk ]; then
+            echo "APK_PATH=cordova-app/platforms/android/app/build/outputs/apk/release/app-release.apk" >> $GITHUB_OUTPUT
+          elif [ -f cordova-app/platforms/android/app/build/outputs/apk/release/app-release-unsigned.apk ]; then
+            echo "APK_PATH=cordova-app/platforms/android/app/build/outputs/apk/release/app-release-unsigned.apk" >> $GITHUB_OUTPUT
+          else
+            echo "APK not found!"
+            exit 1
+          fi
 
       - name: Rename APK
-        run: |
-          mv cordova-app/platforms/android/app/build/outputs/apk/release/app-release.apk Percentage-Lab-signed.apk || \
-          mv cordova-app/platforms/android/app/build/outputs/apk/release/app-release-unsigned.apk Percentage-Lab-signed.apk
+        run: cp ${{ steps.locate-apk.outputs.APK_PATH }} Percentage-Lab-signed.apk
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
