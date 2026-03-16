@@ -28,20 +28,24 @@ jobs:
         run: npm install -g cordova
 
       - name: Create Cordova project
+        run: cordova create cordova-app com.percentagelab.app "مختبر النسبة المئوية"
+
+      - name: Copy project files
         run: |
-          cordova create cordova-app com.percentagelab.app "مختبر النسبة المئوية"
           cp -r * cordova-app/www/ 2>/dev/null || true
           cp config.xml cordova-app/config.xml
-          cd cordova-app
-          cordova platform add android --no-telemetry
+
+      - name: Add Android platform
+        working-directory: ./cordova-app
+        run: cordova platform add android --no-telemetry
 
       - name: Decode Keystore
         run: |
           echo "${{ secrets.KEYSTORE_BASE64 }}" | tr -d '\n\r ' | base64 --decode > cordova-app/percentage-lab.keystore
 
       - name: Build Release APK
+        working-directory: ./cordova-app
         run: |
-          cd cordova-app
           cordova build android --release -- --keystore=percentage-lab.keystore --storePassword=${{ secrets.KEYSTORE_PASSWORD }} --alias=${{ secrets.KEY_ALIAS }} --password=${{ secrets.KEY_PASSWORD }}
 
       - name: Rename APK
