@@ -10,19 +10,18 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
       - name: Set up Java
         uses: actions/setup-java@v4
         with:
-          distribution: 'temurin'
-          java-version: '17'
+          distribution: temurin
+          java-version: 17
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '18'
+          node-version: 18
 
       - name: Install Cordova
         run: npm install -g cordova
@@ -39,11 +38,11 @@ jobs:
         working-directory: ./cordova-app
         run: cordova platform add android --no-telemetry
 
-      - name: Decode Keystore
+      - name: Decode keystore
         run: |
           echo "${{ secrets.KEYSTORE_BASE64 }}" | tr -d '\n\r ' | base64 --decode > cordova-app/percentage-lab.keystore
 
-      - name: Build Release APK
+      - name: Build release APK
         working-directory: ./cordova-app
         run: |
           cordova build android --release -- \
