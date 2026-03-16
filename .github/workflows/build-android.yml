@@ -10,7 +10,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout code
+      - name: Checkout repository
         uses: actions/checkout@v4
 
       - name: Set up Java
@@ -27,31 +27,21 @@ jobs:
       - name: Install Cordova
         run: npm install -g cordova
 
-      # إنشاء مشروع Cordova جديد
-      - name: Create new Cordova project
-        run: |
-          cordova create cordova-project com.percentagelab.app "مختبر النسبة المئوية"
-          # نسخ جميع ملفات المستودع (HTML, JS, resources) إلى مجلد www
-          cp -r * cordova-project/www/ 2>/dev/null || true
-          # استخدام ملف config.xml الموجود (يجب أن يكون مبسطاً)
-          cp config.xml cordova-project/config.xml
-
       - name: Add Android platform
-        run: |
-          cd cordova-project
-          cordova platform add android --no-telemetry
+        run: cordova platform add android --no-telemetry
 
-      - name: Decode Keystore (clean)
+      - name: Decode Keystore
         run: |
-          echo "${{ secrets.KEYSTORE_BASE64 }}" | tr -d '\n\r ' | base64 --decode > cordova-project/percentage-lab.keystore
+          echo "${{ secrets.KEYSTORE_BASE64 }}" | tr -d '\n\r ' | base64 --decode > percentage-lab.keystore
 
       - name: Build Release APK
         run: |
-          cd cordova-project
           cordova build android --release -- --keystore=percentage-lab.keystore --storePassword=${{ secrets.KEYSTORE_PASSWORD }} --alias=${{ secrets.KEY_ALIAS }} --password=${{ secrets.KEY_PASSWORD }}
 
       - name: Rename APK
-        run: mv cordova-project/platforms/android/app/build/outputs/apk/release/app-release.apk Percentage-Lab-signed.apk || mv cordova-project/platforms/android/app/build/outputs/apk/release/app-release-unsigned.apk Percentage-Lab-signed.apk
+        run: |
+          mv platforms/android/app/build/outputs/apk/release/app-release.apk Percentage-Lab-signed.apk || \
+          mv platforms/android/app/build/outputs/apk/release/app-release-unsigned.apk Percentage-Lab-signed.apk
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
