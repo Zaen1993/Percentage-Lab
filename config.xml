@@ -7,50 +7,14 @@
     <access origin="*" />
     <preference name="orientation" value="unspecified" />
     <preference name="Fullscreen" value="true" />
-    <preference name="DisallowOverscroll" value="true" />
     <preference name="android-minSdkVersion" value="22" />
     <preference name="AndroidLaunchMode" value="singleTop" />
-    <preference name="AutoHideSplashScreen" value="false" />
-    <preference name="ShowSplashScreenSpinner" value="false" />
-    <preference name="SplashScreenDelay" value="1000" />
-    <preference name="AndroidWindowSplashScreenAnimatedIcon" value="resources/icon-512.png" />
-    <preference name="AndroidWindowSplashScreenBackground" value="#FFFFFF" />
     <feature name="Camera">
         <param name="android-package" value="org.apache.cordova.camera.CameraLauncher" />
     </feature>
     <uses-permission android:name="android.permission.CAMERA" />
     <uses-permission android:name="android.permission.INTERNET" />
-    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <edit-config target="NSCameraUsageDescription" file="*-Info.plist">
         <string>التطبيق يحتاج الكاميرا للتحكم بحركة المؤشر باستخدام اليد</string>
     </edit-config>
-    <platform name="android">
-        <icon density="ldpi" src="resources/android/mipmap-ldpi/ic_launcher.png" />
-        <icon density="mdpi" src="resources/android/mipmap-mdpi/ic_launcher.png" />
-        <icon density="hdpi" src="resources/android/mipmap-hdpi/ic_launcher.png" />
-        <icon density="xhdpi" src="resources/android/mipmap-xhdpi/ic_launcher.png" />
-        <icon density="xxhdpi" src="resources/android/mipmap-xxhdpi/ic_launcher.png" />
-        <icon density="xxxhdpi" src="resources/android/mipmap-xxxhdpi/ic_launcher.png" />
-    </platform>
-    <platform name="ios">
-        <icon src="resources/ios/AppIcon.appiconset/Icon-App-20x20@1x.png" width="20" height="20" />
-        <icon src="resources/ios/AppIcon.appiconset/Icon-App-20x20@2x.png" width="40" height="40" />
-        <icon src="resources/ios/AppIcon.appiconset/Icon-App-20x20@3x.png" width="60" height="60" />
-        <icon src="resources/ios/AppIcon.appiconset/Icon-App-29x29@1x.png" width="29" height="29" />
-        <icon src="resources/ios/AppIcon.appiconset/Icon-App-29x29@2x.png" width="58" height="58" />
-        <icon src="resources/ios/AppIcon.appiconset/Icon-App-29x29@3x.png" width="87" height="87" />
-        <icon src="resources/ios/AppIcon.appiconset/Icon-App-40x40@1x.png" width="40" height="40" />
-        <icon src="resources/ios/AppIcon.appiconset/Icon-App-40x40@2x.png" width="80" height="80" />
-        <icon src="resources/ios/AppIcon.appiconset/Icon-App-40x40@3x.png" width="120" height="120" />
-        <icon src="resources/ios/AppIcon.appiconset/Icon-App-60x60@2x.png" width="120" height="120" />
-        <icon src="resources/ios/AppIcon.appiconset/Icon-App-60x60@3x.png" width="180" height="180" />
-        <icon src="resources/ios/AppIcon.appiconset/Icon-App-76x76@1x.png" width="76" height="76" />
-        <icon src="resources/ios/AppIcon.appiconset/Icon-App-76x76@2x.png" width="152" height="152" />
-        <icon src="resources/ios/AppIcon.appiconset/Icon-App-83.5x83.5@2x.png" width="167" height="167" />
-        <icon src="resources/ios/iTunesArtwork@1x.png" width="512" height="512" />
-        <icon src="resources/ios/iTunesArtwork@2x.png" width="1024" height="1024" />
-        <icon src="resources/ios/iTunesArtwork@3x.png" width="1536" height="1536" />
-    </platform>
-    <engine name="android" spec="^10.1.2" />
-    <engine name="ios" spec="^6.2.0" />
 </widget>
